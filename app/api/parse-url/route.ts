@@ -1,9 +1,10 @@
 // Importiere Puppeteer für Web-Scraping
-import puppeteer from "puppeteer";
+import puppeteer, { type LaunchOptions } from "puppeteer";
 import { execSync } from 'child_process';
+import type { ExtractedData } from "@/utils/types";
 
 // POST-Route für URL-Parsing
-export async function POST(request) {
+export async function POST(request: Request) {
 	try {
 		// Request-Body extrahieren
 		const body = await request.json();
@@ -39,21 +40,22 @@ export async function POST(request) {
 			journeyDetails: journeyDetails,
 		});
 	} catch (error) {
+		const typedError = error as { message: string }
 		console.error("Error parsing URL:", error);
 		return Response.json(
-			{ error: "Failed to parse URL", details: error.message },
+			{ error: "Failed to parse URL", details: typedError.message },
 			{ status: 500 }
 		);
 	}
 }
 
-function extractJourneyDetails(url) {
+function extractJourneyDetails(url: string) {
 	try {
 		const urlObj = new URL(url);
 		const hash = urlObj.hash;
 		const searchParams = urlObj.searchParams;
 
-		const details = {
+		const details: ExtractedData = {
 			fromStation: null,
 			fromStationId: null,
 			toStation: null,
@@ -64,13 +66,13 @@ function extractJourneyDetails(url) {
 		};
 
 		// Helper functions for extraction
-		const extractStationId = (paramValue) => {
+		const extractStationId = (paramValue: string|null) => {
 			if (!paramValue) return null;
 			const match = paramValue.match(/@L=(\d+)/);
 			return match ? match[1] : null;
 		};
 
-		const extractStationName = (paramValue) => {
+		const extractStationName = (paramValue: string|null) => {
 			if (!paramValue) return null;
 			const oMatch = paramValue.match(/@O=([^@]+)/);
 			if (oMatch) {
@@ -164,16 +166,17 @@ function extractJourneyDetails(url) {
 
 		return details;
 	} catch (error) {
+		const typedError = error as { message: string }
 		console.error("❌ Error extracting journey details:", error);
 		return {
 			error: "Failed to extract journey details",
-			details: error.message,
+			details: typedError.message,
 		};
 	}
 }
 
 // Helper function to display simplified journey information
-function displayJourneyInfo(journeyDetails) {
+function displayJourneyInfo(journeyDetails: ExtractedData) {
 	if (!journeyDetails || journeyDetails.error) {
 		console.log("❌ Failed to extract journey information");
 		return;
@@ -205,10 +208,10 @@ function getSystemChromium() {
   }
 }
 
-async function getResolvedUrl(url) {
+async function getResolvedUrl(url: string) {
 	let browser;
 	try {
-		const launchOptions = {
+		const launchOptions: LaunchOptions = {
 			headless: true,
 			args: [
 				"--no-sandbox",
@@ -270,9 +273,10 @@ async function getResolvedUrl(url) {
 
 		return finalUrl;
 	} catch (error) {
-		console.error("Browser error:", error.message);
+		const typedError = error as { message: string }
+		console.error("Browser error:", typedError.message);
 		// Instead of returning original URL, throw the error so we can handle it properly
-		throw new Error(`Browser navigation failed: ${error.message}`);
+		throw new Error(`Browser navigation failed: ${typedError.message}`);
 	} finally {
 		if (browser) {
 			await browser.close();

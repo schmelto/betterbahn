@@ -1,19 +1,21 @@
 // Importiere DB Vendo Client und notwendige Utilities
+import type { RouteOptions } from "@/utils/types.js";
 import { createClient } from "db-vendo-client";
-import { profile as dbProfile } from "db-vendo-client/p/db/index.js";
 import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards.js";
+import { profile as dbProfile } from "db-vendo-client/p/db/index.js";
+import type { HafasClient } from "hafas-client";
 import {
+	getApiCount,
 	incrementApiCount,
 	resetApiCount,
-	getApiCount,
 } from "../../../utils/apiCounter.js";
 
 // Konfiguriere den DB-Client
 const userAgent = "mail@lukasweihrauch.de";
-const client = createClient(dbProfile, userAgent);
+const client: HafasClient = createClient(dbProfile, userAgent);
 
 // GET-Route für Verbindungssuche
-export async function GET(request) {
+export async function GET(request: Request) {
 	try {
 		// API-Zähler für neue Verbindungssuche zurücksetzen
 		resetApiCount();
@@ -23,7 +25,7 @@ export async function GET(request) {
 		const from = searchParams.get("from");
 		const to = searchParams.get("to");
 		const departure = searchParams.get("departure");
-		const results = searchParams.get("results") || 10;
+		const results = searchParams.get("results") || "10";
 		const bahnCard = searchParams.get("bahnCard");
 		const hasDeutschlandTicket =
 			searchParams.get("hasDeutschlandTicket") === "true";
@@ -52,7 +54,7 @@ export async function GET(request) {
 		}
 
 		// Suchoptionen konfigurieren
-		const options = {
+		const options: RouteOptions = {
 			results: departure ? 5 : parseInt(results), // Weniger Ergebnisse bei genauer Zeit um Rauschen zu reduzieren
 			stopovers: true,
 			// Bei genauer Abfahrtszeit wollen wir exakte Treffer, nicht verschiedene Alternativen
@@ -127,6 +129,10 @@ export async function GET(request) {
 
 				// Check if end station matches
 				const endStationMatches = lastLeg.destination?.id === to;
+
+				if (firstLeg.departure === undefined) {
+					return false;
+				}
 
 				// Check if departure time matches (within 1 minute tolerance for exact time matching)
 				const journeyDeparture = new Date(firstLeg.departure);
@@ -223,7 +229,13 @@ export async function GET(request) {
 
 			// Sort by departure time
 			uniqueJourneys.sort(
-				(a, b) => new Date(a.legs[0].departure) - new Date(b.legs[0].departure)
+				(a, b) => {
+					if (a.legs[0].departure === undefined || b.legs[0].departure === undefined) {
+						throw new Error("Can't sort journeys: Leg with undefined departure")
+					}
+
+					return new Date(a.legs[0].departure).getTime() - new Date(b.legs[0].departure).getTime();
+				}
 			);
 
 			allJourneys = uniqueJourneys;
@@ -245,9 +257,10 @@ export async function GET(request) {
 			journeys: allJourneys,
 		});
 	} catch (error) {
+		const typedError = error as { message: string }
 		console.error("Error fetching journeys:", error);
 		return Response.json(
-			{ error: "Failed to fetch journeys", details: error.message },
+			{ error: "Failed to fetch journeys", details: typedError.message },
 			{ status: 500 }
 		);
 	}

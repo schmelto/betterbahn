@@ -1,9 +1,12 @@
 "use client";
 
+import type { Duration, CustomJourney, CustomLeg } from "@/utils/types";
+import type { Journey, Leg } from "hafas-client";
+
 // Hilfsfunktionen für Formatierung
 
 // Formatiert Zeitangabe für deutsche Anzeige
-const formatTime = (dateString) => {
+const formatTime = (dateString: string|undefined) => {
 	if (!dateString) return "--:--";
 	return new Date(dateString).toLocaleTimeString("de-DE", {
 		hour: "2-digit",
@@ -12,7 +15,7 @@ const formatTime = (dateString) => {
 };
 
 // Formatiert Reisedauer in lesbarer Form
-const formatDuration = (duration) => {
+const formatDuration = (duration: Duration) => {
 	if (!duration) return "Unknown";
 
 	// Behandle ISO 8601 Dauerformat (PT1H30M)
@@ -28,7 +31,7 @@ const formatDuration = (duration) => {
 		try {
 			const dep = new Date(duration.departure);
 			const arr = new Date(duration.arrival);
-			const diffMs = arr - dep;
+			const diffMs = arr.getTime() - dep.getTime();
 			const diffMins = Math.floor(diffMs / 60000);
 			const hours = Math.floor(diffMins / 60);
 			const minutes = diffMins % 60;
@@ -49,7 +52,7 @@ const formatDuration = (duration) => {
 };
 
 // Formatiert Datum für deutsche Anzeige
-const formatDate = (dateString) => {
+const formatDate = (dateString: string) => {
 	if (!dateString) return "";
 	return new Date(dateString).toLocaleDateString("de-DE", {
 		day: "2-digit",
@@ -57,8 +60,19 @@ const formatDate = (dateString) => {
 	});
 };
 
+const trainIdentifier = ( leg: CustomLeg ) => {
+	// Try to get the best train identifier
+	if (leg.line?.name) return leg.line.name;
+	if (leg.line?.product && leg.line?.productName)
+		return `${leg.line.product} ${leg.line.productName}`;
+	if (leg.line?.product) return leg.line.product;
+	if (leg.line?.mode) return leg.line.mode;
+	if (leg.mode) return leg.mode;
+	return "Train";
+};
+
 // Component for displaying detailed leg information
-const LegDetails = ({ leg, legIndex, isLast }) => {
+const LegDetails = ({ leg, legIndex, isLast }: { leg: Leg, legIndex: number, isLast: boolean }) => {
 	if (leg.walking) {
 		return (
 			<div className="text-xs text-gray-600 py-1">
@@ -75,16 +89,7 @@ const LegDetails = ({ leg, legIndex, isLast }) => {
 				<span className="font-medium text-sm flex items-center gap-1">
 					Leg {legIndex + 1}:
 					<span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">
-						{(() => {
-							// Try to get the best train identifier
-							if (leg.line?.name) return leg.line.name;
-							if (leg.line?.product && leg.line?.productName)
-								return `${leg.line.product} ${leg.line.productName}`;
-							if (leg.line?.product) return leg.line.product;
-							if (leg.line?.mode) return leg.line.mode;
-							if (leg.mode) return leg.mode;
-							return "Train";
-						})()}
+						{trainIdentifier(leg)}
 					</span>
 					{leg.line?.mode && (
 						<span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">
@@ -115,7 +120,7 @@ const LegDetails = ({ leg, legIndex, isLast }) => {
 								try {
 									const dep = new Date(leg.departure);
 									const arr = new Date(leg.arrival);
-									const diffMs = arr - dep;
+									const diffMs = arr.getTime() - dep.getTime();
 									const diffMins = Math.floor(diffMs / 60000);
 									const hours = Math.floor(diffMins / 60);
 									const minutes = diffMins % 60;
@@ -147,6 +152,13 @@ const JourneyCard = ({
 	hasDeutschlandTicket,
 	travelClass,
 	isSelected = false,
+}: {
+	journey: Journey
+	index: unknown
+	bahnCard: unknown
+	hasDeutschlandTicket: unknown
+	travelClass?: string
+	isSelected?: boolean
 }) => {
 	// Extract journey information safely
 	const firstLeg = journey.legs?.[0];
@@ -161,7 +173,7 @@ const JourneyCard = ({
 	const transferCount = Math.max(0, nonWalkingLegs.length - 1);
 
 	// Get transfer stations
-	const transferStations = [];
+	const transferStations: string[] = [];
 	if (nonWalkingLegs.length > 1) {
 		for (let i = 0; i < nonWalkingLegs.length - 1; i++) {
 			const currentLeg = nonWalkingLegs[i];
@@ -222,7 +234,7 @@ const JourneyCard = ({
 								try {
 									const dep = new Date(departure);
 									const arr = new Date(arrival);
-									const diffMs = arr - dep;
+									const diffMs = arr.getTime() - dep.getTime();
 									const diffMins = Math.floor(diffMs / 60000);
 									const hours = Math.floor(diffMins / 60);
 									const minutes = diffMins % 60;
@@ -297,7 +309,7 @@ const JourneyCard = ({
 								try {
 									const dep = new Date(departure);
 									const arr = new Date(arrival);
-									const diffMs = arr - dep;
+									const diffMs = arr.getTime() - dep.getTime();
 									const diffMins = Math.floor(diffMs / 60000);
 									const hours = Math.floor(diffMins / 60);
 									const minutes = diffMins % 60;

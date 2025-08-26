@@ -1,5 +1,7 @@
 // Preis- und Rabattberechnungen
 
+import type { CustomLeg } from "./types";
+
 // Vorberechnete Lookups für Regionalzüge
 const REGIONAL_PRODUCTS = new Set([
 	"regional",
@@ -13,7 +15,7 @@ const REGIONAL_PRODUCTS = new Set([
 const REGIONAL_PATTERNS = [/^re\s*\d+/i, /^rb\s*\d+/i, /^s\s*\d+/i, /^s-bahn/i];
 
 // Überprüfe ob ein Leg ein Regionalzug ist
-export const isRegionalTrain = (leg) => {
+export const isRegionalTrain = (leg: CustomLeg) => {
 	if (!leg || leg.walking || !leg.line) return false;
 
 	// Überprüfe Produkttyp

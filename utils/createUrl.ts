@@ -1,3 +1,17 @@
+import type { Segment } from "next/dist/server/app-render/types"
+
+interface Station {
+	id?: string
+	stationId?: string
+	uicCode?: string
+	evaId?: string
+	name: string
+	longitude?: number
+	latitude?: number
+	x?: number
+	y?: number
+}
+
 /**
  * Erstellt eine Such-URL für die offizielle DB-Website
  * @param {Object} params - Suchparameter
@@ -16,6 +30,13 @@ export function createDBSearchUrl({
 	class: travelClass = 2,
 	fromStation = null,
 	toStation = null,
+}: {
+	from: string|number|boolean,
+	to: string|number|boolean,
+	date: string
+	class: unknown
+	fromStation: Station|null
+	toStation: Station|null
 }) {
 	// Datum formatieren für DB-URL
 	const formattedDate = formatDate(date);
@@ -28,7 +49,7 @@ export function createDBSearchUrl({
 	];
 
 	// Hilfsfunktion zum Hinzufügen von Stationsdaten
-	const addStation = (prefix, station) => {
+	const addStation = (prefix: string, station: Station|null) => {
 		if (!station?.id) return;
 		parts.push(`${prefix}oid=${createStationId(station)}`);
 		parts.push(`${prefix}ei=${station.id}`);
@@ -61,7 +82,7 @@ export function createDBSearchUrl({
  * @param {string} date - ISO date string
  * @returns {string} Formatted date string
  */
-function formatDate(date) {
+function formatDate(date: string) {
 	if (typeof date !== "string") return date;
 	let formatted = date
 		.replace(/\+\d{2}:\d{2}$/, "")
@@ -77,7 +98,7 @@ function formatDate(date) {
  * @param {Object} station - Station object with name, id, and coordinates
  * @returns {string} Encoded station ID
  */
-function createStationId(station) {
+function createStationId(station: Station) {
 	const stationString = Object.entries({
 		A: "1",
 		O: station.name,
@@ -100,7 +121,7 @@ function createStationId(station) {
  * @param {number} travelClass - Travel class (1 or 2)
  * @returns {string} DB website search URL
  */
-export function createSegmentSearchUrl(segment, travelClass = 2) {
+export function createSegmentSearchUrl(segment: Segment, travelClass = 2) {
 	if (!segment?.legs?.length)
 		throw new Error("Invalid segment: missing legs data");
 	const legs = segment.legs;
@@ -145,7 +166,7 @@ export function createSegmentSearchUrl(segment, travelClass = 2) {
 /**
  * Known problematic station mappings - station IDs that don't match expected names
  */
-const PROBLEMATIC_STATION_IDS = {
+const PROBLEMATIC_STATION_IDS: Record<string, string> = {
 	// Add known problematic mappings here
 	8002235: "Senden", // This ID seems to resolve to Senden instead of Gengenbach
 };
@@ -156,7 +177,7 @@ const PROBLEMATIC_STATION_IDS = {
  * @param {string} stationName - The station name
  * @returns {boolean} - Whether the station ID is safe to use
  */
-function shouldUseStationId(stationId, stationName) {
+function shouldUseStationId(stationId: string, stationName: string) {
 	if (!stationId || !stationName) return false;
 	const problematicName = PROBLEMATIC_STATION_IDS[stationId];
 	if (
@@ -171,7 +192,7 @@ function shouldUseStationId(stationId, stationName) {
 	return true;
 }
 
-function addStationId(station, type, parts) {
+function addStationId(station: Station, type: string, parts: string[]) {
 	const stationId =
 		station.id || station.stationId || station.uicCode || station.evaId;
 

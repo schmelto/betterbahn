@@ -2,17 +2,18 @@
 import { getJourneyLegsWithTransfers } from "./journeyUtils.js";
 import { isRegionalTrain } from "./pricingUtils.js";
 import { isLegCoveredByDeutschlandTicket } from "./deutschlandTicketUtils.js";
+import type { CustomJourney, CustomLeg } from "./types.js";
 
 // Berechne Reiseabdeckung und Preisgestaltung
-export const calculateJourneyPricing = (journey, hasDeutschlandTicket) => {
+export const calculateJourneyPricing = (journey: CustomJourney, hasDeutschlandTicket: boolean) => {
 	// Extrahiere nur Zuglegs (keine Fußwege)
 	const trainLegs = getJourneyLegsWithTransfers(journey);
-	const analyzer = (leg) =>
+	const analyzer = (leg: CustomLeg) =>
 		isLegCoveredByDeutschlandTicket(leg, hasDeutschlandTicket);
 	const isFullyCovered = trainLegs.every(analyzer);
 
 	// Überprüfe ob Reise Regionalzüge enthält
-	const isRegional = (leg) => isRegionalTrain(leg);
+	const isRegional = (leg: CustomLeg) => isRegionalTrain(leg);
 	const hasRegionalTrains = trainLegs.some(isRegional);
 	const isOnlyRegionalTrains =
 		trainLegs.length > 0 && trainLegs.every(isRegional);

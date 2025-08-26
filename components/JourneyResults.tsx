@@ -1,7 +1,9 @@
 "use client";
 
+import type { CustomJourney } from "@/utils/types";
 // Importiere JourneyCard-Komponente
 import JourneyCard from "./JourneyCard";
+import type { Journey } from "hafas-client";
 
 // Komponente zur Anzeige aller gefundenen Verbindungen
 const JourneyResults = ({
@@ -12,6 +14,14 @@ const JourneyResults = ({
 	travelClass,
 	onJourneySelect,
 	selectedJourney,
+}: {
+	journeys: Journey[]
+	bahnCard: unknown
+	hasDeutschlandTicket: boolean
+	passengerAge: unknown
+	travelClass?: string
+	onJourneySelect?: (journey: Journey, index: number) => unknown
+	selectedJourney: Journey | null
 }) => {
 	// Zeige nichts an, falls keine Verbindungen vorhanden
 	if (!journeys || journeys.length === 0) {

@@ -1,11 +1,14 @@
 // Importiere DB Vendo Client und notwendige Utilities
+import type { CustomJourney, ProgressInfo, SplitOption } from "@/utils/types.js";
 import { createClient } from "db-vendo-client";
-import { profile as dbProfile } from "db-vendo-client/p/db/index.js";
 import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards.js";
-import { incrementApiCount, getApiCount } from "../../../utils/apiCounter.js";
+import { profile as dbProfile } from "db-vendo-client/p/db/index.js";
+import type { HafasClient, Journey, JourneysOptionsCommon, JourneysOptionsDbProfile, Station } from "hafas-client";
+import { getApiCount, incrementApiCount } from "../../../utils/apiCounter.js";
+import type { Segment } from "next/dist/server/app-render/types.js";
 
 // Konfiguriere DB-Client
-const client = createClient(dbProfile, "mail@lukasweihrauch.de");
+const client: HafasClient = createClient(dbProfile, "mail@lukasweihrauch.de");
 
 // ---- Konfiguration ----
 const MIN_SINGLE_SAVINGS_FACTOR = 1; // Preis muss < original * 0.98 sein
@@ -14,7 +17,7 @@ const DEFAULT_BATCH_SIZE = 1; // Konservativ für Rate-Limits
 const VERBOSE = true; // Ausführliche Logs ein/ausschalten
 
 // POST-Route für Split-Journey Analyse
-export async function POST(request) {
+export async function POST(request: Request) {
 	try {
 		// Übergebene Daten aus der Anfrage extrahieren
 		const {
@@ -100,8 +103,13 @@ function buildQueryOptions({
 	hasDeutschlandTicket,
 	passengerAge,
 	travelClass,
+}: {
+	bahnCard: string
+	hasDeutschlandTicket: boolean
+	passengerAge: unknown
+	travelClass?: string
 }) {
-	const options = {
+	const options: JourneysOptionsDbProfile & JourneysOptionsCommon & { deutschlandTicketDiscount?: boolean } = {
 		results: 1,
 		stopovers: true,
 		firstClass: parseInt(travelClass || "2", 10) === 1,
@@ -119,7 +127,7 @@ function buildQueryOptions({
 	return options;
 }
 
-function extractSplitPoints(journey) {
+function extractSplitPoints(journey: CustomJourney) {
 	const map = new Map();
 	journey.legs.forEach((leg, legIndex) => {
 		if (leg.walking || !leg.stopovers) return;
@@ -150,11 +158,11 @@ function extractSplitPoints(journey) {
 }
 
 async function analyzeSplitPoints(
-	originalJourney,
-	splitPoints,
-	queryOptions,
-	originalPrice,
-	{ onProgress, batchSize = DEFAULT_BATCH_SIZE } = {}
+	originalJourney: CustomJourney,
+	splitPoints: Station[],
+	queryOptions: unknown,
+	originalPrice: number,
+	{ onProgress, batchSize = DEFAULT_BATCH_SIZE }: { onProgress?: unknown; batchSize?: number } = {}
 ) {
 	const splitOptions = [];
 	const streaming = typeof onProgress === "function";
@@ -163,7 +171,7 @@ async function analyzeSplitPoints(
 			`\n🔍 Analyse von ${splitPoints.length} Split-Stationen gestartet (streaming=${streaming})`
 		);
 
-	const processBatch = async (points) => {
+	const processBatch = async (points: Station[]) => {
 		const results = await Promise.allSettled(
 			points.map((sp) =>
 				analyzeSingleSplit(originalJourney, sp, queryOptions, originalPrice)
@@ -179,10 +187,10 @@ async function analyzeSplitPoints(
 				splitOptions.push(res.value);
 				if (VERBOSE)
 					console.log(
-						`✅ ${sp.station.name}: €${res.value.totalPrice} (saves €${res.value.savings})`
+						`✅ ${sp.station?.name}: €${res.value.totalPrice} (saves €${res.value.savings})`
 					);
 			} else if (res.status === "rejected" && VERBOSE) {
-				console.log(`❌ ${sp.station.name}:`, res.reason?.message || "error");
+				console.log(`❌ ${sp.station?.name}:`, res.reason?.message || "error");
 			}
 		});
 	};
@@ -193,8 +201,8 @@ async function analyzeSplitPoints(
 			onProgress({
 				checked: i,
 				total: splitPoints.length,
-				message: `Prüfe ${sp.station.name}...`,
-				currentStation: sp.station.name,
+				message: `Prüfe ${sp.station?.name}...`,
+				currentStation: sp.station?.name,
 			});
 			try {
 				const option = await analyzeSingleSplit(
@@ -218,7 +226,7 @@ async function analyzeSplitPoints(
 					i + 1 === splitPoints.length
 						? "Analyse abgeschlossen"
 						: `${i + 1}/${splitPoints.length} Stationen geprüft`,
-				currentStation: sp.station.name,
+				currentStation: sp.station?.name,
 			});
 			if (i < splitPoints.length - 1)
 				await new Promise((r) => setTimeout(r, 100));
@@ -235,10 +243,10 @@ async function analyzeSplitPoints(
 
 // Split Analysis Functions
 async function analyzeSingleSplit(
-	originalJourney,
-	splitPoint,
-	queryOptions,
-	originalPrice
+	originalJourney: CustomJourney,
+	splitPoint: { departure: string, station: Station, trainLine: unknown },
+	queryOptions: unknown,
+	originalPrice: number
 ) {
 	const origin = originalJourney.legs[0].origin;
 	const destination =
@@ -250,11 +258,11 @@ async function analyzeSingleSplit(
 		// Increment API counters for both segments
 		incrementApiCount(
 			"SPLIT_SEARCH_SEGMENT_1",
-			`${origin.name} → ${splitPoint.station.name}`
+			`${origin?.name} → ${splitPoint.station?.name}`
 		);
 		incrementApiCount(
 			"SPLIT_SEARCH_SEGMENT_2",
-			`${splitPoint.station.name} → ${destination.name}`
+			`${splitPoint.station?.name} → ${destination?.name}`
 		);
 
 		// Make both API calls in parallel using Promise.all
@@ -268,6 +276,10 @@ async function analyzeSingleSplit(
 				departure: splitDeparture,
 			}),
 		]);
+
+		if (firstSegment.journeys === undefined || secondSegment.journeys === undefined) {
+			return null;
+		}
 
 		const firstJourney = findMatchingJourney(
 			firstSegment.journeys,
@@ -298,21 +310,22 @@ async function analyzeSingleSplit(
 
 		return null;
 	} catch (error) {
+		const typedError = error as { message: string }
 		console.log(
 			`Single split analysis error at ${splitPoint.station.name}:`,
-			error.message
+			typedError.message
 		);
 		throw error; // Re-throw to be handled by Promise.allSettled
 	}
 }
 
 function createSplitResult(
-	type,
-	splitStations,
-	segments,
-	totalPrice,
-	originalPrice,
-	trainLine
+	type: string,
+	splitStations: unknown,
+	segments: Segment[],
+	totalPrice: number,
+	originalPrice: number,
+	trainLine: { name?: string, product?: string }
 ) {
 	const savings = originalPrice - totalPrice;
 	return {
@@ -330,7 +343,7 @@ function createSplitResult(
 	};
 }
 
-function findMatchingJourney(journeys, targetDeparture) {
+function findMatchingJourney(journeys: readonly Journey[], targetDeparture: Date) {
 	if (!journeys?.length) return null;
 	const expected = targetDeparture.getTime();
 	return (
@@ -344,12 +357,12 @@ function findMatchingJourney(journeys, targetDeparture) {
 
 // Streaming handler for real-time progress updates
 async function handleStreamingResponse(
-	originalJourney,
-	splitPoints,
-	bahnCard,
-	hasDeutschlandTicket,
-	passengerAge,
-	travelClass
+	originalJourney: CustomJourney,
+	splitPoints: Station[],
+	bahnCard: string,
+	hasDeutschlandTicket: boolean,
+	passengerAge: string,
+	travelClass: string
 ) {
 	const encoder = new TextEncoder();
 
@@ -384,7 +397,7 @@ async function handleStreamingResponse(
 					queryOptions,
 					originalPrice,
 					{
-						onProgress: (progress) => {
+						onProgress: (progress: ProgressInfo) => {
 							controller.enqueue(
 								encoder.encode(
 									`data: ${JSON.stringify({
@@ -412,9 +425,11 @@ async function handleStreamingResponse(
 					encoder.encode(`data: ${JSON.stringify(finalData)}\n\n`)
 				);
 			} catch (error) {
+				const typedError = error as { message?: string }
+
 				const errorData = {
 					type: "error",
-					error: error.message || "Failed to analyze split journeys",
+					error: typedError.message || "Failed to analyze split journeys",
 				};
 				controller.enqueue(
 					encoder.encode(`data: ${JSON.stringify(errorData)}\n\n`)

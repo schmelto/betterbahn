@@ -1,10 +1,12 @@
 "use client";
 // Importiere notwendige React-Hooks und Komponenten
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import JourneyResults from "@/components/JourneyResults";
 import SplitOptions from "@/components/SplitOptions";
 import { searchForJourneys, validateJourneyData } from "@/utils/journeyUtils";
+import type { ExtractedData, CustomJourney, CustomPrice, ProgressInfo, SplitOption } from "@/utils/types";
+import type { Journey, Price } from "hafas-client";
 
 // Konstanten für Lademeldungen
 const LOADING_MESSAGES = {
@@ -23,12 +25,14 @@ const STATUS = {
 	ANALYZING: "analyzing",
 	DONE: "done",
 	ERROR: "error",
-};
+} as const;
+
+type Status = typeof STATUS[keyof typeof STATUS]
 
 // Hilfsfunktionen für Formatierung
 
 // Formatiere Zeit für deutsche Anzeige
-const formatTime = (dateTime) => {
+const formatTime = (dateTime?: string) => {
 	if (!dateTime) return "";
 	return new Date(dateTime).toLocaleTimeString("de-DE", {
 		hour: "2-digit",
@@ -37,31 +41,31 @@ const formatTime = (dateTime) => {
 };
 
 // Formatiere Reisedauer
-const formatDuration = (journey) => {
+const formatDuration = (journey: Journey) => {
 	if (!journey?.legs || journey.legs.length === 0) return "";
 	const departure = new Date(journey.legs[0].departure);
 	const arrival = new Date(journey.legs[journey.legs.length - 1].arrival);
-	const durationMs = arrival - departure;
+	const durationMs = arrival.getTime() - departure.getTime();
 	const hours = Math.floor(durationMs / (1000 * 60 * 60));
 	const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
 	return `${hours}h ${minutes}m`;
 };
 
 // Zähle Anzahl der Umstiege
-const getChangesCount = (journey) => {
+const getChangesCount = (journey: Journey) => {
 	if (!journey?.legs) return 0;
 	return Math.max(0, journey.legs.length - 1);
 };
 
 // Formatiere Preis für Anzeige
-const formatPrice = (price) => {
+const formatPrice = (price: CustomPrice) => {
 	if (typeof price === "object") {
 		return `${price.amount} ${price.currency || "€"}`;
 	}
 	return `${price}€`;
 };
 
-const formatPriceWithTwoDecimals = (price) => {
+const formatPriceWithTwoDecimals = (price: Price | undefined) => {
 	if (typeof price === "object") {
 		const amount = parseFloat(price.amount);
 		return `${amount.toFixed(2).replace(".", ",")}€`;
@@ -71,7 +75,11 @@ const formatPriceWithTwoDecimals = (price) => {
 };
 
 // --- Component: Status Box ---
-function StatusBox({ message, isLoading, progressInfo }) {
+function StatusBox({ message, isLoading, progressInfo }: {
+	message: string
+	isLoading: boolean
+	progressInfo?: ProgressInfo
+}) {
 	return (
 		<div className="w-full mb-6">
 			<div className="bg-primary text-white rounded-lg p-3 flex flex-col items-center justify-center py-8">
@@ -140,7 +148,7 @@ function JourneyIcon() {
 }
 
 // --- Component: Journey Info Row ---
-function JourneyInfoRow({ children }) {
+function JourneyInfoRow({ children }: { children: ReactNode}) {
 	return (
 		<div className="text-sm text-gray-500 my-2 pl-1 flex items-center">
 			{children}
@@ -149,7 +157,9 @@ function JourneyInfoRow({ children }) {
 }
 
 // --- Component: Original Journey Card ---
-function OriginalJourneyCard({ extractedData, selectedJourney }) {
+function OriginalJourneyCard({ extractedData, selectedJourney }: {
+	extractedData: ExtractedData, selectedJourney: Journey
+}) {
 	if (!extractedData) return null;
 
 	const renderSelectedJourney = () => (
@@ -266,6 +276,11 @@ function SplitOptionsCard({
 	selectedJourney,
 	extractedData,
 	status,
+}: {
+	splitOptions?: SplitOption[]
+	extractedData?: ExtractedData
+	selectedJourney?: CustomJourney
+	status?: Status
 }) {
 	const renderContent = () => {
 		if (status === STATUS.SELECTING) {
@@ -325,7 +340,7 @@ function SplitOptionsCard({
 }
 
 // --- Component: Error Display ---
-function ErrorDisplay({ error }) {
+function ErrorDisplay({ error }: { error: string }) {
 	return (
 		<div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg">
 			<div className="flex items-center">
@@ -346,19 +361,19 @@ function Discount() {
 	const searchParams = useSearchParams();
 
 	// State
-	const [status, setStatus] = useState(STATUS.LOADING);
+	const [status, setStatus] = useState<Status>(STATUS.LOADING);
 	const [journeys, setJourneys] = useState([]);
-	const [extractedData, setExtractedData] = useState(null);
+	const [extractedData, setExtractedData] = useState<ExtractedData|null>(null);
 	const [error, setError] = useState("");
-	const [selectedJourney, setSelectedJourney] = useState(null);
+	const [selectedJourney, setSelectedJourney] = useState<Journey|null>(null);
 	const [splitOptions, setSplitOptions] = useState(null);
 	const [loadingMessage, setLoadingMessage] = useState(
 		LOADING_MESSAGES.initial
 	);
-	const [progressInfo, setProgressInfo] = useState(null); // New state for progress tracking
+	const [progressInfo, setProgressInfo] = useState<ProgressInfo|null>(null); // New state for progress tracking
 
 	// Handlers
-	const analyzeSplitOptions = useCallback(async (journey, journeyData) => {
+	const analyzeSplitOptions = useCallback(async (journey: Journey, journeyData: ExtractedData) => {
 		setStatus(STATUS.ANALYZING);
 		setLoadingMessage(LOADING_MESSAGES.analyzing);
 		setProgressInfo(null);
@@ -384,7 +399,7 @@ function Discount() {
 			}
 
 			// Handle Server-Sent Events
-			const reader = response.body.getReader();
+			const reader = response.body!.getReader();
 			const decoder = new TextDecoder();
 			let buffer = "";
 
@@ -422,15 +437,16 @@ function Discount() {
 				}
 			}
 		} catch (err) {
+			const typedErr = err as { message?: string }
 			console.error("Error analyzing split options:", err);
-			setError(err.message || "Fehler bei der Analyse der Split-Optionen.");
+			setError(typedErr.message || "Fehler bei der Analyse der Split-Optionen.");
 			setStatus(STATUS.ERROR);
 			setProgressInfo(null);
 		}
 	}, []);
 
 	const handleJourneySelect = useCallback(
-		(journey) => {
+		(journey: Journey) => {
 			setSelectedJourney(journey);
 			setSplitOptions(null);
 
@@ -507,7 +523,8 @@ function Discount() {
 					setStatus(STATUS.DONE);
 				}
 			} catch (err) {
-				setError(err.message);
+				const typedErr = err as { message: string }
+				setError(typedErr.message);
 				setStatus(STATUS.ERROR);
 			}
 		};

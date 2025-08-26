@@ -1,8 +1,9 @@
 "use client";
 
 // Importiere notwendige React-Hooks und Next.js-Router
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, type FormEventHandler } from "react";
 import { useRouter } from "next/navigation";
+import type { FormState, Updates } from "@/utils/types";
 
 // Konstanten für Formular-Initialwerte
 const INITIAL_FORM_STATE = {
@@ -34,14 +35,14 @@ const SearchForm = () => {
 	// UI-Zustand verwalten
 	const [url, setUrl] = useState("");
 	const [isParsingUrl, setIsParsingUrl] = useState(false);
-	const [urlParseError, setUrlParseError] = useState(null);
+	const [urlParseError, setUrlParseError] = useState<string|null>(null);
 	const [showHelp, setShowHelp] = useState(false);
 
 	// Formulardaten-Zustand
-	const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+	const [formData, setFormData] = useState<FormState>(INITIAL_FORM_STATE);
 
 	// URL-Validierungs-Hilfsfunktionen
-	const isValidDBBookingUrl = useCallback((url) => {
+	const isValidDBBookingUrl = useCallback((url: string) => {
 		try {
 			const urlObj = new URL(url);
 
@@ -67,7 +68,7 @@ const SearchForm = () => {
 	}, []);
 
 	const extractUrlFromText = useCallback(
-		(text) => {
+		(text: string) => {
 			const urlRegex = /https?:\/\/[^\s\n\r]+/gi;
 			const matches = text.match(urlRegex);
 
@@ -92,7 +93,7 @@ const SearchForm = () => {
 	);
 
 	// Utility functions
-	const updateFormData = (updates) => {
+	const updateFormData = (updates: Updates) => {
 		// save updated form fields to local Storage for convenience
 		if (updates.bahnCard != null) {
 			localStorage.setItem("betterbahn/settings/bahnCard", updates.bahnCard);
@@ -100,7 +101,7 @@ const SearchForm = () => {
 		if (updates.hasDeutschlandTicket != null) {
 			localStorage.setItem(
 				"betterbahn/settings/hasDeutschlandTicket",
-				updates.hasDeutschlandTicket,
+				String(updates.hasDeutschlandTicket),
 			);
 		}
 		if (updates.passengerAge != null) {
@@ -113,7 +114,7 @@ const SearchForm = () => {
 	};
 
 	// Handle URL parsing and navigation
-	const handleUrlSubmit = async (e) => {
+	const handleUrlSubmit: FormEventHandler = async (e) => {
 		e.preventDefault();
 
 		if (!url.trim()) {
@@ -130,8 +131,8 @@ const SearchForm = () => {
 		const searchParams = new URLSearchParams({
 			url: extractedUrl,
 			bahnCard: formData.bahnCard,
-			hasDeutschlandTicket: formData.hasDeutschlandTicket.toString(),
-			passengerAge: formData.passengerAge,
+			hasDeutschlandTicket: String(formData.hasDeutschlandTicket),
+			passengerAge: String(formData.passengerAge),
 			travelClass: formData.travelClass,
 			// autoSearch: "true", // Flag to indicate auto-search should happen
 		});
@@ -150,7 +151,9 @@ const SearchForm = () => {
 		const storageDTicket = localStorage.getItem(
 			"betterbahn/settings/hasDeutschlandTicket",
 		);
-		const updates = {};
+
+		const updates: Partial<FormState> = {};
+
 		if (storageBahnCard != null) {
 			updates.bahnCard = storageBahnCard;
 		}
@@ -242,7 +245,7 @@ const SearchForm = () => {
 						disabled={isParsingUrl}
 					/>
 					<select
-						value={formData.hasDeutschlandTicket}
+						value={String(formData.hasDeutschlandTicket)}
 						onChange={(e) =>
 							updateFormData({
 								hasDeutschlandTicket: e.target.value === "true",

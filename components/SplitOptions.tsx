@@ -14,9 +14,10 @@ import {
 	isFlixTrain,
 } from "../utils/deutschlandTicketUtils";
 import { createSegmentSearchUrl } from "../utils/createUrl";
+import type { CustomJourney, SplitOption } from "@/utils/types";
 
 // Hilfsfunktion zur Formatierung von Preisen mit deutschem Komma
-const formatPriceDE = (price) => {
+const formatPriceDE = (price: number) => {
 	return `${price.toFixed(2).replace(".", ",")}€`;
 };
 
@@ -27,12 +28,18 @@ const SplitOptions = ({
 	loadingSplits,
 	hasDeutschlandTicket,
 	bahnCard,
+}: {
+	splitOptions: SplitOption[]
+	originalJourney: CustomJourney
+	loadingSplits: unknown
+	hasDeutschlandTicket: boolean
+	bahnCard: unknown
 }) => {
 	// State für erweiterte Optionsanzeige (erste Option standardmäßig erweitert)
-	const [expandedOption, setExpandedOption] = useState(0);
+	const [expandedOption, setExpandedOption] = useState<number|null>(0);
 
 	// Berechne Split-Option Preisgestaltung mit Deutschland-Ticket Logik
-	const calculateSplitOptionPricing = (splitOption) => {
+	const calculateSplitOptionPricing = (splitOption: SplitOption) => {
 		if (!splitOption || !splitOption.segments) {
 			return {
 				...splitOption,
@@ -69,7 +76,7 @@ const SplitOptions = ({
 
 		let cannotShowPrice = false;
 		let hasPartialPricing = false;
-		let segmentsWithoutPricing = [];
+		let segmentsWithoutPricing: number[] = [];
 		let allSegmentsCovered = false;
 
 		allSegmentsCovered = splitOption.segments.every((segment) => {
@@ -162,7 +169,7 @@ const SplitOptions = ({
 		};
 	};
 
-	const formatSplitJourney = (splitOption) => {
+	const formatSplitJourney = (splitOption: SplitOption) => {
 		const segments = splitOption.segments;
 		const splitStations = splitOption.splitStations;
 
@@ -194,7 +201,7 @@ const SplitOptions = ({
 	};
 
 	// Determine which split options to show based on pricing availability
-	const getOptionsToShow = (splitOptions) => {
+	const getOptionsToShow = (splitOptions: SplitOption[]) => {
 		if (!splitOptions || splitOptions.length === 0) return [];
 
 		// Calculate pricing for all options first
