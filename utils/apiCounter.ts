@@ -6,7 +6,6 @@ let requestTimes: number[] = [];
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 Minute in Millisekunden
 const MAX_REQUESTS_PER_MINUTE = 60; // DB API Limit
 
-// Funktion zum Erhöhen des API-Zählers
 export function incrementApiCount(endpoint: string, description = "") {
 	apiCallCount++;
 
@@ -45,12 +44,10 @@ export function incrementApiCount(endpoint: string, description = "") {
 	return apiCallCount;
 }
 
-// Funktion zum Abrufen der aktuellen API-Anzahl
 export function getApiCount() {
 	return apiCallCount;
 }
 
-// Funktion zum Zurücksetzen des API-Zählers
 export function resetApiCount() {
 	apiCallCount = 0;
 	requestTimes = [];

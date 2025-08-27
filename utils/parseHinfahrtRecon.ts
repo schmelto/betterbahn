@@ -37,7 +37,7 @@ export const parseHinfahrtRecon = (hinfahrtRecon: string) => {
 
 	try {
 		scJsonString = zlib.gunzipSync(scGzipBuffer).toString("utf-8");
-	} catch (error) {
+	} catch {
 		throw new Error(
 			"Can't process vbid: hinfahrtRecon 'SC' failed to get gunzipped"
 		);
