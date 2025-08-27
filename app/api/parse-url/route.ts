@@ -1,7 +1,9 @@
 // Importiere Puppeteer für Web-Scraping
-import puppeteer, { type LaunchOptions } from "puppeteer";
-import { execSync } from 'child_process';
+import { parseHinfahrtReconCrude } from "@/utils/parseHinfahrtRecon";
 import type { ExtractedData } from "@/utils/types";
+import { execSync } from 'child_process';
+import puppeteer, { type LaunchOptions } from "puppeteer";
+import { z } from "zod/v4";
 
 // POST-Route für URL-Parsing
 export async function POST(request: Request) {
@@ -21,7 +23,7 @@ export async function POST(request: Request) {
 		let finalUrl;
 		try {
 			// Verwende headless Browser um JavaScript-Redirects zu handhaben
-			finalUrl = await getResolvedUrl(url);
+			finalUrl = await getResolvedUrlBrowserless(url);
 		} catch (browserError) {
 			console.log(
 				"Browser navigation failed, trying to parse original URL directly"
@@ -282,4 +284,23 @@ async function getResolvedUrl(url: string) {
 			await browser.close();
 		}
 	}
+}
+
+async function getResolvedUrlBrowserless(url: string) {
+	const response = await fetch(`https://www.bahn.de/web/api/angebote/verbindung/${new URL(url).searchParams.get("vbid")}`)
+
+	const json = await response.json()
+
+	const parsed = z.object({
+		hinfahrtRecon: z.string()
+	}).parse(json)
+
+	const data = parseHinfahrtReconCrude(parsed.hinfahrtRecon)
+
+	const newUrl = new URL("https://www.bahn.de/buchung/fahrplan/suche")
+
+	newUrl.searchParams.set("soid", data[0])
+	newUrl.searchParams.set("zoid", data[1])
+
+	return newUrl.toString()
 }

@@ -1,0 +1,87 @@
+import zlib from "node:zlib";
+import { z } from "zod/v4";
+
+export const parseHinfahrtReconCrude = (hinfahrtRecon: string) => {
+	const dirtyRegex = /A=1@O=.*?@a=\d+@/g;
+	const matches = hinfahrtRecon.match(dirtyRegex);
+
+	if (matches === null) {
+		throw new Error("Can't process vbid: hinfahrtRecon regex failed");
+	}
+
+	return [matches[0], matches.at(-1)!] as const;
+};
+
+export const parseHinfahrtRecon = (hinfahrtRecon: string) => {
+	// hinfahrtRecon ist ein verfluchtes format.
+
+	const sections = hinfahrtRecon.split("¶");
+	const scIndex = sections.findIndex((s) => s === "SC");
+
+	if (scIndex === -1) {
+		throw new Error("Can't process vbid: Couldn't find 'SC' in hinfahrtRecon");
+	}
+
+	const scGzipBase64WithPrefix = sections[scIndex + 1];
+
+	if (!scGzipBase64WithPrefix.startsWith("1_")) {
+		throw new Error(
+			"Can't process vbid: hinfahrtRecon 'SC' unexpectedly doesn't start with '1_'"
+		);
+	}
+
+	const scGzipBase64 = scGzipBase64WithPrefix.slice("1_".length);
+	const scGzipBuffer = Buffer.from(scGzipBase64, "base64");
+
+	let scJsonString = "";
+
+	try {
+		scJsonString = zlib.gunzipSync(scGzipBuffer).toString("utf-8");
+	} catch (error) {
+		throw new Error(
+			"Can't process vbid: hinfahrtRecon 'SC' failed to get gunzipped"
+		);
+	}
+
+	let scUnvalidatedJson = "";
+
+	try {
+		scUnvalidatedJson = JSON.parse(scJsonString);
+	} catch {
+		throw new Error(
+			"Can't process vbid: hinfahrtRecon 'SC' JSON parsing failed (invalid JSON)"
+		);
+	}
+
+	const scJsonSchema = z.object({
+		req: z.object({
+			arrLoc: z
+				.array(
+					z.object({
+						lid: z.string(),
+					})
+				)
+				.min(1),
+			depLoc: z
+				.array(
+					z.object({
+						lid: z.string(),
+					})
+				)
+				.min(1),
+		}),
+	});
+
+	const scValidatedJsonResult = scJsonSchema.safeParse(scUnvalidatedJson);
+
+	if (!scValidatedJsonResult.success) {
+		throw new Error(
+			"Can't process vbid: hinfahrtRecon 'SC' JSON doesn't match schema"
+		);
+	}
+
+	return {
+		arrLid: scValidatedJsonResult.data.req.arrLoc[0].lid,
+		departLid: scValidatedJsonResult.data.req.depLoc[0].lid,
+	};
+};
