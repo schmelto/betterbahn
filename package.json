@@ -8,7 +8,8 @@
     "start": "next start",
     "start:production": "USE_CHROMIUM_PATH=true next start",
     "lint": "next lint",
-    "deploy": "docker build"
+    "deploy": "docker build",
+    "oxlint": "oxlint"
   },
   "dependencies": {
     "db-vendo-client": "^6.8.2",
@@ -22,6 +23,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/react": "^19.1.11",
     "@types/react-dom": "^19.1.8",
+    "oxlint": "^1.13.0",
     "tailwindcss": "^4",
     "typescript": "^5.9.2",
     "zod": "^4.1.3"
