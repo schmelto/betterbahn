@@ -1,6 +1,7 @@
 // Hilfsfunktionen für Reiseberechnungen und Formatierung
 
-import type { ExtractedData, CustomJourney, CustomLeg, LegWithTransfers, Stop } from "./types";
+import type { Journey, Leg, Stop } from "hafas-client";
+import type { ExtractedData } from "./types";
 
 // Formatiere Zeit von ISO-String zu HH:MM
 export const formatTime = (dateString: string) => {
@@ -23,7 +24,7 @@ export const formatTime = (dateString: string) => {
 };
 
 // Berechne und formatiere Reisedauer
-export const formatDuration = (journey: { legs: CustomLeg[] }) => {
+export const formatDuration = (journey: { legs: Leg[] }) => {
 	const legs = journey?.legs;
 	if (!legs?.length) return "Unknown duration";
 	const firstLeg = legs[0];
@@ -43,7 +44,7 @@ export const formatDuration = (journey: { legs: CustomLeg[] }) => {
 };
 
 // Hole Zuglinie-Informationen aus einem Leg
-export const getLineInfo = (leg: CustomLeg) => {
+export const getLineInfo = (leg: Leg) => {
 	if (leg.walking) return null;
 	return leg.line?.name || leg.line?.product || "Unknown";
 };
@@ -53,13 +54,13 @@ export const getStationName = (stop?: Stop) =>
 	stop?.station?.name || stop?.name || "Unknown";
 
 // Calculate transfer time in minutes
-export const calculateTransferTime = (leg: CustomLeg) => {
+export const calculateTransferTime = (leg: Leg) => {
 	if (!leg.walking || !leg.departure || !leg.arrival) return 0;
 	return Math.round((new Date(leg.arrival).getTime() - new Date(leg.departure).getTime()) / 60000);
 };
 
 // Filter out walking legs and get non-walking legs with transfer times
-export const getJourneyLegsWithTransfers = (journey: CustomJourney) => {
+export const getJourneyLegsWithTransfers = (journey: Journey) => {
 	const legs = journey?.legs || [];
 	return legs
 		.map((leg, i) => {
@@ -70,7 +71,7 @@ export const getJourneyLegsWithTransfers = (journey: CustomJourney) => {
 				transferTimeAfter: next?.walking ? calculateTransferTime(next) : 0,
 			};
 		})
-		.filter(Boolean) as LegWithTransfers[];
+		.filter(Boolean) as (Leg & { transferTimeAfter: number })[];
 };
 
 // =================

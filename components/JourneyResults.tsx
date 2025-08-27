@@ -1,30 +1,23 @@
 "use client";
 
-import type { CustomJourney } from "@/utils/types";
 // Importiere JourneyCard-Komponente
+import type { VendoJourney } from "@/schemas/vendoJourney";
 import JourneyCard from "./JourneyCard";
-import type { Journey } from "hafas-client";
 
 // Komponente zur Anzeige aller gefundenen Verbindungen
 const JourneyResults = ({
 	journeys,
-	bahnCard,
-	hasDeutschlandTicket,
-	passengerAge,
 	travelClass,
 	onJourneySelect,
 	selectedJourney,
 }: {
-	journeys: Journey[]
-	bahnCard: unknown
-	hasDeutschlandTicket: boolean
-	passengerAge: unknown
+	journeys: VendoJourney[]
 	travelClass?: string
-	onJourneySelect?: (journey: Journey, index: number) => unknown
-	selectedJourney: Journey | null
+	onJourneySelect?: (journey: VendoJourney, index: number) => unknown
+	selectedJourney: VendoJourney | null
 }) => {
 	// Zeige nichts an, falls keine Verbindungen vorhanden
-	if (!journeys || journeys.length === 0) {
+	if (journeys.length === 0) {
 		return null;
 	}
 
@@ -51,9 +44,6 @@ const JourneyResults = ({
 							{/* Zeige einzelne Verbindungskarte an */}
 							<JourneyCard
 								journey={journey}
-								index={index}
-								bahnCard={bahnCard}
-								hasDeutschlandTicket={hasDeutschlandTicket}
 								travelClass={travelClass}
 								isSelected={isSelected}
 							/>

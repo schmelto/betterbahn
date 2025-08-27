@@ -72,7 +72,7 @@ const SearchForm = () => {
 			const urlRegex = /https?:\/\/[^\s\n\r]+/gi;
 			const matches = text.match(urlRegex);
 
-			if (matches?.length > 0) {
+			if (matches?.length) {
 				for (let foundUrl of matches) {
 					foundUrl = foundUrl.replace(/[.,;!?\s]*$/, "");
 					if (isValidDBBookingUrl(foundUrl)) {

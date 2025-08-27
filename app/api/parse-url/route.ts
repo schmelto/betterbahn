@@ -151,7 +151,7 @@ function extractJourneyDetails(url: string) {
 		if (searchParams.has("hd")) details.date = searchParams.get("hd");
 		if (searchParams.has("ht")) details.time = searchParams.get("ht");
 		if (searchParams.has("kl"))
-			details.class = parseInt(searchParams.get("kl"));
+			details.class = parseInt(searchParams.get("kl")!);
 		if (searchParams.has("so") && !details.fromStation)
 			details.fromStation = searchParams.get("so");
 		if (searchParams.has("zo") && !details.toStation)

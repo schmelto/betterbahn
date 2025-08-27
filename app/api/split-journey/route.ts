@@ -1,11 +1,11 @@
 // Importiere DB Vendo Client und notwendige Utilities
-import type { CustomJourney, ProgressInfo, SplitOption } from "@/utils/types.js";
+import type { ProgressInfo } from "@/utils/types.js";
 import { createClient } from "db-vendo-client";
-import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards.js";
-import { profile as dbProfile } from "db-vendo-client/p/db/index.js";
+import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
+import { profile as dbProfile } from "db-vendo-client/p/db/index";
 import type { HafasClient, Journey, JourneysOptionsCommon, JourneysOptionsDbProfile, Station } from "hafas-client";
-import { getApiCount, incrementApiCount } from "../../../utils/apiCounter.js";
-import type { Segment } from "next/dist/server/app-render/types.js";
+import type { Segment } from "next/dist/server/app-render/types";
+import { getApiCount, incrementApiCount } from "../../../utils/apiCounter";
 
 // Konfiguriere DB-Client
 const client: HafasClient = createClient(dbProfile, "mail@lukasweihrauch.de");
@@ -127,7 +127,7 @@ function buildQueryOptions({
 	return options;
 }
 
-function extractSplitPoints(journey: CustomJourney) {
+function extractSplitPoints(journey: Journey) {
 	const map = new Map();
 	journey.legs.forEach((leg, legIndex) => {
 		if (leg.walking || !leg.stopovers) return;
@@ -158,7 +158,7 @@ function extractSplitPoints(journey: CustomJourney) {
 }
 
 async function analyzeSplitPoints(
-	originalJourney: CustomJourney,
+	originalJourney: Journey,
 	splitPoints: Station[],
 	queryOptions: unknown,
 	originalPrice: number,
@@ -243,7 +243,7 @@ async function analyzeSplitPoints(
 
 // Split Analysis Functions
 async function analyzeSingleSplit(
-	originalJourney: CustomJourney,
+	originalJourney: Journey,
 	splitPoint: { departure: string, station: Station, trainLine: unknown },
 	queryOptions: unknown,
 	originalPrice: number
@@ -357,7 +357,7 @@ function findMatchingJourney(journeys: readonly Journey[], targetDeparture: Date
 
 // Streaming handler for real-time progress updates
 async function handleStreamingResponse(
-	originalJourney: CustomJourney,
+	originalJourney: Journey,
 	splitPoints: Station[],
 	bahnCard: string,
 	hasDeutschlandTicket: boolean,

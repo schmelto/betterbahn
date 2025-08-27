@@ -1,18 +1,33 @@
 // Importiere DB Vendo Client und notwendige Utilities
-import type { RouteOptions } from "@/utils/types.js";
 import { createClient } from "db-vendo-client";
-import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards.js";
-import { profile as dbProfile } from "db-vendo-client/p/db/index.js";
-import type { HafasClient } from "hafas-client";
+import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
+import { profile as dbProfile } from "db-vendo-client/p/db/index";
+import type { HafasClient, LoyaltyCard } from "hafas-client";
 import {
 	getApiCount,
 	incrementApiCount,
 	resetApiCount,
-} from "../../../utils/apiCounter.js";
+} from "../../../utils/apiCounter";
+import { z } from "zod/v4";
+import { vendoJourneySchema } from "@/schemas/vendoJourney";
 
 // Konfiguriere den DB-Client
 const userAgent = "mail@lukasweihrauch.de";
 const client: HafasClient = createClient(dbProfile, userAgent);
+
+interface SearchJourneysOptions {
+	results: number;
+	stopovers: boolean;
+	notOnlyFastRoutes: boolean;
+	remarks: boolean;
+	transfers: number;
+	firstClass: boolean;
+	departure?: Date;
+	loyaltyCard?: LoyaltyCard;
+	age?: number;
+	deutschlandTicketDiscount?: boolean;
+	deutschlandTicketConnectionsOnly?: boolean;
+}
 
 // GET-Route für Verbindungssuche
 export async function GET(request: Request) {
@@ -54,7 +69,7 @@ export async function GET(request: Request) {
 		}
 
 		// Suchoptionen konfigurieren
-		const options: RouteOptions = {
+		const options: SearchJourneysOptions = {
 			results: departure ? 5 : parseInt(results), // Weniger Ergebnisse bei genauer Zeit um Rauschen zu reduzieren
 			stopovers: true,
 			// Bei genauer Abfahrtszeit wollen wir exakte Treffer, nicht verschiedene Alternativen
@@ -106,7 +121,10 @@ export async function GET(request: Request) {
 
 		// Verbindungen von DB-API abrufen
 		const journeys = await client.journeys(from, to, options);
-		let allJourneys = journeys.journeys || [];
+		const parsed = z
+			.object({ journeys: z.array(vendoJourneySchema) })
+			.parse(journeys);
+		let allJourneys = parsed.journeys || [];
 
 		console.log(`Received ${allJourneys.length} journeys from main query`);
 
@@ -119,10 +137,12 @@ export async function GET(request: Request) {
 
 			// Filter journeys that exactly match the search criteria
 			const exactMatches = allJourneys.filter((journey) => {
-				if (!journey.legs || journey.legs.length === 0) return false;
+				if (journey.legs.length === 0) {
+					return false;
+				}
 
 				const firstLeg = journey.legs[0];
-				const lastLeg = journey.legs[journey.legs.length - 1];
+				const lastLeg = journey.legs.at(-1)!;
 
 				// Check if start station matches
 				const startStationMatches = firstLeg.origin?.id === from;
@@ -130,15 +150,12 @@ export async function GET(request: Request) {
 				// Check if end station matches
 				const endStationMatches = lastLeg.destination?.id === to;
 
-				if (firstLeg.departure === undefined) {
-					return false;
-				}
-
 				// Check if departure time matches (within 1 minute tolerance for exact time matching)
 				const journeyDeparture = new Date(firstLeg.departure);
 				const timeDifference = Math.abs(
 					journeyDeparture.getTime() - targetDepartureTime.getTime()
 				);
+
 				const timeMatches = timeDifference <= 60000; // 1 minute tolerance
 
 				return startStationMatches && endStationMatches && timeMatches;
@@ -196,7 +213,7 @@ export async function GET(request: Request) {
 		} else {
 			// If no specific departure time is provided, remove general duplicates
 			const uniqueJourneys = allJourneys.filter((journey, index, arr) => {
-				if (!journey.legs || journey.legs.length === 0) return false;
+				if (journey.legs.length === 0) return false;
 
 				const journeySignature = journey.legs
 					.map(
@@ -229,13 +246,9 @@ export async function GET(request: Request) {
 
 			// Sort by departure time
 			uniqueJourneys.sort(
-				(a, b) => {
-					if (a.legs[0].departure === undefined || b.legs[0].departure === undefined) {
-						throw new Error("Can't sort journeys: Leg with undefined departure")
-					}
-
-					return new Date(a.legs[0].departure).getTime() - new Date(b.legs[0].departure).getTime();
-				}
+				(a, b) =>
+					new Date(a.legs[0].departure).getTime() -
+					new Date(b.legs[0].departure).getTime()
 			);
 
 			allJourneys = uniqueJourneys;
@@ -257,7 +270,7 @@ export async function GET(request: Request) {
 			journeys: allJourneys,
 		});
 	} catch (error) {
-		const typedError = error as { message: string }
+		const typedError = error as { message: string };
 		console.error("Error fetching journeys:", error);
 		return Response.json(
 			{ error: "Failed to fetch journeys", details: typedError.message },

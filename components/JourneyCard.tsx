@@ -1,12 +1,12 @@
 "use client";
 
-import type { Duration, CustomJourney, CustomLeg } from "@/utils/types";
-import type { Journey, Leg } from "hafas-client";
+import type { VendoJourney, VendoLeg } from "@/schemas/vendoJourney";
+import type { ArrivalDeparture, Journey, Leg } from "hafas-client";
 
 // Hilfsfunktionen für Formatierung
 
 // Formatiert Zeitangabe für deutsche Anzeige
-const formatTime = (dateString: string|undefined) => {
+const formatTime = (dateString: string | undefined) => {
 	if (!dateString) return "--:--";
 	return new Date(dateString).toLocaleTimeString("de-DE", {
 		hour: "2-digit",
@@ -15,7 +15,7 @@ const formatTime = (dateString: string|undefined) => {
 };
 
 // Formatiert Reisedauer in lesbarer Form
-const formatDuration = (duration: Duration) => {
+const formatDuration = (duration: ArrivalDeparture) => {
 	if (!duration) return "Unknown";
 
 	// Behandle ISO 8601 Dauerformat (PT1H30M)
@@ -60,19 +60,33 @@ const formatDate = (dateString: string) => {
 	});
 };
 
-const trainIdentifier = ( leg: CustomLeg ) => {
+const trainIdentifier = (leg: VendoLeg) => {
 	// Try to get the best train identifier
-	if (leg.line?.name) return leg.line.name;
-	if (leg.line?.product && leg.line?.productName)
+	if (leg.line?.name) {
+		return leg.line.name;
+	}
+
+	if (leg.line?.product && leg.line?.productName) {
 		return `${leg.line.product} ${leg.line.productName}`;
-	if (leg.line?.product) return leg.line.product;
-	if (leg.line?.mode) return leg.line.mode;
-	if (leg.mode) return leg.mode;
+	}
+
+	if (leg.line?.product) {
+		return leg.line.product;
+	}
+
+	if (leg.line?.mode) {
+		return leg.line.mode;
+	}
+
+	if (leg.mode) {
+		return leg.mode;
+	}
+
 	return "Train";
 };
 
 // Component for displaying detailed leg information
-const LegDetails = ({ leg, legIndex, isLast }: { leg: Leg, legIndex: number, isLast: boolean }) => {
+const LegDetails = ({ leg, legIndex, isLast }: { leg: VendoLeg, legIndex: number, isLast: boolean }) => {
 	if (leg.walking) {
 		return (
 			<div className="text-xs text-gray-600 py-1">
@@ -147,16 +161,10 @@ const LegDetails = ({ leg, legIndex, isLast }: { leg: Leg, legIndex: number, isL
 
 const JourneyCard = ({
 	journey,
-	index,
-	bahnCard,
-	hasDeutschlandTicket,
 	travelClass,
 	isSelected = false,
 }: {
-	journey: Journey
-	index: unknown
-	bahnCard: unknown
-	hasDeutschlandTicket: unknown
+	journey: VendoJourney
 	travelClass?: string
 	isSelected?: boolean
 }) => {

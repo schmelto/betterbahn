@@ -1,12 +1,13 @@
 "use client";
 // Importiere notwendige React-Hooks und Komponenten
-import { useState, useEffect, useCallback, Suspense, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
 import JourneyResults from "@/components/JourneyResults";
 import SplitOptions from "@/components/SplitOptions";
+import type { VendoJourney } from "@/schemas/vendoJourney";
 import { searchForJourneys, validateJourneyData } from "@/utils/journeyUtils";
-import type { ExtractedData, CustomJourney, CustomPrice, ProgressInfo, SplitOption } from "@/utils/types";
+import type { ExtractedData, ProgressInfo, SplitOption } from "@/utils/types";
 import type { Journey, Price } from "hafas-client";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 
 // Konstanten für Lademeldungen
 const LOADING_MESSAGES = {
@@ -58,14 +59,14 @@ const getChangesCount = (journey: Journey) => {
 };
 
 // Formatiere Preis für Anzeige
-const formatPrice = (price: CustomPrice) => {
+const formatPrice = (price: Price) => {
 	if (typeof price === "object") {
 		return `${price.amount} ${price.currency || "€"}`;
 	}
 	return `${price}€`;
 };
 
-const formatPriceWithTwoDecimals = (price: Price | undefined) => {
+const formatPriceWithTwoDecimals = (price: Price | number) => {
 	if (typeof price === "object") {
 		const amount = parseFloat(price.amount);
 		return `${amount.toFixed(2).replace(".", ",")}€`;
@@ -279,7 +280,7 @@ function SplitOptionsCard({
 }: {
 	splitOptions?: SplitOption[]
 	extractedData?: ExtractedData
-	selectedJourney?: CustomJourney
+	selectedJourney?: Journey
 	status?: Status
 }) {
 	const renderContent = () => {
@@ -365,7 +366,7 @@ function Discount() {
 	const [journeys, setJourneys] = useState([]);
 	const [extractedData, setExtractedData] = useState<ExtractedData|null>(null);
 	const [error, setError] = useState("");
-	const [selectedJourney, setSelectedJourney] = useState<Journey|null>(null);
+	const [selectedJourney, setSelectedJourney] = useState<VendoJourney|null>(null);
 	const [splitOptions, setSplitOptions] = useState(null);
 	const [loadingMessage, setLoadingMessage] = useState(
 		LOADING_MESSAGES.initial
@@ -373,7 +374,7 @@ function Discount() {
 	const [progressInfo, setProgressInfo] = useState<ProgressInfo|null>(null); // New state for progress tracking
 
 	// Handlers
-	const analyzeSplitOptions = useCallback(async (journey: Journey, journeyData: ExtractedData) => {
+	const analyzeSplitOptions = useCallback(async (journey: VendoJourney, journeyData: ExtractedData) => {
 		setStatus(STATUS.ANALYZING);
 		setLoadingMessage(LOADING_MESSAGES.analyzing);
 		setProgressInfo(null);
@@ -509,7 +510,7 @@ function Discount() {
 
 				// Search for journeys
 				setLoadingMessage(LOADING_MESSAGES.searching);
-				const foundJourneys = await searchForJourneys(journeyData);
+				const foundJourneys = await searchForJourneys(journeyData) as VendoJourney[];
 
 				if (foundJourneys.length === 1) {
 					setLoadingMessage(LOADING_MESSAGES.single_journey_flow);
@@ -601,7 +602,7 @@ function Discount() {
 			<StatusBox
 				message={getStatusMessage()}
 				isLoading={isLoading}
-				progressInfo={progressInfo}
+				progressInfo={progressInfo ?? undefined}
 			/>
 			{renderContent()}
 		</section>

@@ -1,19 +1,19 @@
 // Importiere Hilfsfunktionen für Reise- und Preisanalyse
+import type { Journey, Leg } from "hafas-client";
+import { isLegCoveredByDeutschlandTicket } from "./deutschlandTicketUtils.js";
 import { getJourneyLegsWithTransfers } from "./journeyUtils.js";
 import { isRegionalTrain } from "./pricingUtils.js";
-import { isLegCoveredByDeutschlandTicket } from "./deutschlandTicketUtils.js";
-import type { CustomJourney, CustomLeg } from "./types.js";
 
 // Berechne Reiseabdeckung und Preisgestaltung
-export const calculateJourneyPricing = (journey: CustomJourney, hasDeutschlandTicket: boolean) => {
+export const calculateJourneyPricing = (journey: Journey, hasDeutschlandTicket: boolean) => {
 	// Extrahiere nur Zuglegs (keine Fußwege)
 	const trainLegs = getJourneyLegsWithTransfers(journey);
-	const analyzer = (leg: CustomLeg) =>
+	const analyzer = (leg: Leg) =>
 		isLegCoveredByDeutschlandTicket(leg, hasDeutschlandTicket);
 	const isFullyCovered = trainLegs.every(analyzer);
 
 	// Überprüfe ob Reise Regionalzüge enthält
-	const isRegional = (leg: CustomLeg) => isRegionalTrain(leg);
+	const isRegional = (leg: Leg) => isRegionalTrain(leg);
 	const hasRegionalTrains = trainLegs.some(isRegional);
 	const isOnlyRegionalTrains =
 		trainLegs.length > 0 && trainLegs.every(isRegional);

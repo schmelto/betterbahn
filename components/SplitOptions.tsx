@@ -1,20 +1,22 @@
 "use client";
 
 // Importiere React-Hooks und Hilfsfunktionen
+import type { SplitOption } from "@/utils/types";
+import type { Journey } from "hafas-client";
 import { useState } from "react";
-import {
-	formatTime,
-	formatDuration,
-	getJourneyLegsWithTransfers,
-	getStationName,
-	getLineInfo,
-} from "../utils/journeyUtils";
-import {
-	isLegCoveredByDeutschlandTicket,
-	isFlixTrain,
-} from "../utils/deutschlandTicketUtils";
 import { createSegmentSearchUrl } from "../utils/createUrl";
-import type { CustomJourney, SplitOption } from "@/utils/types";
+import {
+	isFlixTrain,
+	isLegCoveredByDeutschlandTicket,
+} from "../utils/deutschlandTicketUtils";
+import {
+	formatDuration,
+	formatTime,
+	getJourneyLegsWithTransfers,
+	getLineInfo,
+	getStationName,
+} from "../utils/journeyUtils";
+import type { VendoJourney } from "@/schemas/vendoJourney";
 
 // Hilfsfunktion zur Formatierung von Preisen mit deutschem Komma
 const formatPriceDE = (price: number) => {
@@ -27,13 +29,11 @@ const SplitOptions = ({
 	originalJourney,
 	loadingSplits,
 	hasDeutschlandTicket,
-	bahnCard,
 }: {
 	splitOptions: SplitOption[]
-	originalJourney: CustomJourney
+	originalJourney: VendoJourney
 	loadingSplits: unknown
 	hasDeutschlandTicket: boolean
-	bahnCard: unknown
 }) => {
 	// State für erweiterte Optionsanzeige (erste Option standardmäßig erweitert)
 	const [expandedOption, setExpandedOption] = useState<number|null>(0);
