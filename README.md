@@ -28,7 +28,7 @@ This project is licensed under the Creative Commons Attribution-NonCommercial 4.
 
 ## Community and Contribution
 
-Join the [Discord community](https://discord.gg/eDZF75HG) to ask questions, share feedback, and connect with other users and contributors.
+Join the [Discord community](https://discord.gg/pQr9dv5S) to ask questions, share feedback, and connect with other users and contributors.
 
 Want to contribute? Please read the [Code of Conduct](/CODE_OF_CONDUCT.md) and see the [Contributing Guide](/CONTRIBUTE.md) for details on how to get started.
 

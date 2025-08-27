@@ -1,6 +1,7 @@
 "use client";
 import { JourneyResults } from "@/components/JourneyResults";
 import { SplitOptions } from "@/components/SplitOptions/SplitOptions";
+import { isLegCoveredByDeutschlandTicket } from "@/utils/deutschlandTicketUtils";
 import { searchForJourneys, validateJourneyData } from "@/utils/journeyUtils";
 import type { VendoJourney, VendoPrice } from "@/utils/schemas";
 import type { ExtractedData, ProgressInfo, SplitOption } from "@/utils/types";
@@ -63,11 +64,19 @@ const getChangesCount = (journey: VendoJourney) => {
 };
 
 const formatPriceWithTwoDecimals = (price: VendoPrice | number) => {
-	if (typeof price === "object") {
-		return `${price.amount.toFixed(2).replace(".", ",")}€`;
-	}
+    let amount;
 
-	return `${price.toFixed(2).replace(".", ",")}€`;
+    if (price && typeof price === "object") {
+        amount = (price.amount);
+    } else {
+        amount = (price);
+    }
+
+    if (isNaN(amount)) {
+        return null;
+    }
+
+    return `${amount.toFixed(2).replace(".", ",")}€`;
 };
 
 function StatusBox({
@@ -165,6 +174,26 @@ function OriginalJourneyCard({
 }) {
 	if (!extractedData) return null;
 
+    const { hasDeutschlandTicket } = extractedData;
+    const trainLegs = selectedJourney.legs?.filter((leg) => !leg.walking) || [];
+    const isFullyCoveredByDticket =
+        hasDeutschlandTicket &&
+        trainLegs.length > 0 &&
+        trainLegs.every((leg) =>
+            isLegCoveredByDeutschlandTicket(leg, hasDeutschlandTicket)
+        );
+
+    const formattedPrice = formatPriceWithTwoDecimals(selectedJourney.price);
+    let priceDisplay;
+
+    if (formattedPrice !== null) {
+        priceDisplay = formattedPrice;
+    } else if (isFullyCoveredByDticket) {
+        priceDisplay = "0,00€";
+    } else {
+        priceDisplay = "Preis auf Anfrage";
+    }
+
 	const renderSelectedJourney = () => (
 		<div className="border rounded-lg overflow-hidden shadow-sm bg-white border-gray-200">
 			<div className="p-4">
@@ -186,7 +215,7 @@ function OriginalJourneyCard({
 							<div className="text-right">
 								<div className="font-bold text-lg text-red-600">Original</div>
 								<div className="text-xl font-bold text-gray-900">
-									{formatPriceWithTwoDecimals(selectedJourney.price)}
+                                    {priceDisplay}
 								</div>
 							</div>
 						</div>
