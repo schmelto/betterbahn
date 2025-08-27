@@ -1,16 +1,15 @@
-// Importiere DB Vendo Client und notwendige Utilities
+import type { VendoJourney, VendoLeg, VendoStation } from "@/utils/schemas";
 import type { ProgressInfo } from "@/utils/types.js";
+// @ts-ignore
 import { createClient } from "db-vendo-client";
+// @ts-ignore
 import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
+// @ts-ignore
 import { profile as dbProfile } from "db-vendo-client/p/db/index";
-import type { HafasClient, Journey, JourneysOptionsCommon, JourneysOptionsDbProfile, Station } from "hafas-client";
-import type { Segment } from "next/dist/server/app-render/types";
 import { getApiCount, incrementApiCount } from "../../../utils/apiCounter";
 
-// Konfiguriere DB-Client
-const client: HafasClient = createClient(dbProfile, "mail@lukasweihrauch.de");
+const client = createClient(dbProfile, "mail@lukasweihrauch.de");
 
-// ---- Konfiguration ----
 const MIN_SINGLE_SAVINGS_FACTOR = 1; // Preis muss < original * 0.98 sein
 const TIME_TOLERANCE_MS = 60_000; // 1 Minute Toleranz
 const DEFAULT_BATCH_SIZE = 1; // Konservativ für Rate-Limits
@@ -97,6 +96,19 @@ export async function POST(request: Request) {
 	}
 }
 
+interface QueryOptions {
+	deutschlandTicketDiscount?: boolean;
+	results: number;
+	stopovers: boolean;
+	firstClass: boolean;
+	loyaltyCard?: {
+		type: string;
+		discount: number;
+		class: number;
+	};
+	age?: number;
+}
+
 // Helper Functions
 function buildQueryOptions({
 	bahnCard,
@@ -104,17 +116,19 @@ function buildQueryOptions({
 	passengerAge,
 	travelClass,
 }: {
-	bahnCard: string
-	hasDeutschlandTicket: boolean
-	passengerAge: unknown
-	travelClass?: string
+	bahnCard: string;
+	hasDeutschlandTicket: boolean;
+	passengerAge: unknown;
+	travelClass?: string;
 }) {
-	const options: JourneysOptionsDbProfile & JourneysOptionsCommon & { deutschlandTicketDiscount?: boolean } = {
+	const options: QueryOptions = {
 		results: 1,
 		stopovers: true,
 		firstClass: parseInt(travelClass || "2", 10) === 1,
 	};
+
 	const discount = parseInt(bahnCard, 10);
+
 	if (bahnCard && bahnCard !== "none" && [25, 50, 100].includes(discount)) {
 		options.loyaltyCard = {
 			type: loyaltyCards.BAHNCARD,
@@ -122,22 +136,35 @@ function buildQueryOptions({
 			class: parseInt(travelClass || "2", 10),
 		};
 	}
-	if (typeof passengerAge === "number") options.age = passengerAge;
-	if (hasDeutschlandTicket) options.deutschlandTicketDiscount = true;
+
+	if (typeof passengerAge === "number") {
+		options.age = passengerAge;
+	}
+
+	if (hasDeutschlandTicket) {
+		options.deutschlandTicketDiscount = true;
+	}
+
 	return options;
 }
 
-function extractSplitPoints(journey: Journey) {
+function extractSplitPoints(journey: VendoJourney) {
 	const map = new Map();
+
 	journey.legs.forEach((leg, legIndex) => {
-		if (leg.walking || !leg.stopovers) return;
+		if (leg.walking || !leg.stopovers) {
+			return;
+		}
+
 		leg.stopovers.forEach((s, stopIndex) => {
 			if (
 				(legIndex === 0 && stopIndex === 0) ||
 				(legIndex === journey.legs.length - 1 &&
-					stopIndex === leg.stopovers.length - 1)
-			)
+					stopIndex === leg.stopovers!.length - 1)
+			) {
 				return;
+			}
+
 			if (s.arrival && s.departure && s.stop && !map.has(s.stop.id)) {
 				map.set(s.stop.id, {
 					station: { id: s.stop.id, name: s.stop.name },
@@ -151,18 +178,25 @@ function extractSplitPoints(journey: Journey) {
 			}
 		});
 	});
+
 	const uniqueStops = Array.from(map.values());
-	if (VERBOSE)
+
+	if (VERBOSE) {
 		console.log(`Extracted ${uniqueStops.length} unique split candidates.`);
+	}
+
 	return uniqueStops;
 }
 
 async function analyzeSplitPoints(
-	originalJourney: Journey,
-	splitPoints: Station[],
-	queryOptions: unknown,
+	originalJourney: VendoJourney,
+	splitPoints: VendoStation[],
+	queryOptions: QueryOptions,
 	originalPrice: number,
-	{ onProgress, batchSize = DEFAULT_BATCH_SIZE }: { onProgress?: unknown; batchSize?: number } = {}
+	{
+		onProgress,
+		batchSize = DEFAULT_BATCH_SIZE,
+	}: { onProgress?: unknown; batchSize?: number } = {}
 ) {
 	const splitOptions = [];
 	const streaming = typeof onProgress === "function";
@@ -171,7 +205,7 @@ async function analyzeSplitPoints(
 			`\n🔍 Analyse von ${splitPoints.length} Split-Stationen gestartet (streaming=${streaming})`
 		);
 
-	const processBatch = async (points: Station[]) => {
+	const processBatch = async (points: VendoStation[]) => {
 		const results = await Promise.allSettled(
 			points.map((sp) =>
 				analyzeSingleSplit(originalJourney, sp, queryOptions, originalPrice)
@@ -243,9 +277,9 @@ async function analyzeSplitPoints(
 
 // Split Analysis Functions
 async function analyzeSingleSplit(
-	originalJourney: Journey,
-	splitPoint: { departure: string, station: Station, trainLine: unknown },
-	queryOptions: unknown,
+	originalJourney: VendoJourney,
+	splitPoint: { departure: string; station: VendoStation; trainLine: unknown },
+	queryOptions: QueryOptions,
 	originalPrice: number
 ) {
 	const origin = originalJourney.legs[0].origin;
@@ -267,17 +301,21 @@ async function analyzeSingleSplit(
 
 		// Make both API calls in parallel using Promise.all
 		const [firstSegment, secondSegment] = await Promise.all([
-			client.journeys(origin.id, splitPoint.station.id, {
+			client.journeys(origin?.id, splitPoint.station.id, {
 				...queryOptions,
 				departure: originalDeparture,
 			}),
-			client.journeys(splitPoint.station.id, destination.id, {
+
+			client.journeys(splitPoint.station.id, destination?.id, {
 				...queryOptions,
 				departure: splitDeparture,
 			}),
 		]);
 
-		if (firstSegment.journeys === undefined || secondSegment.journeys === undefined) {
+		if (
+			firstSegment.journeys === undefined ||
+			secondSegment.journeys === undefined
+		) {
 			return null;
 		}
 
@@ -285,12 +323,19 @@ async function analyzeSingleSplit(
 			firstSegment.journeys,
 			originalDeparture
 		);
-		if (!firstJourney) return null;
+
+		if (!firstJourney) {
+			return null;
+		}
+
 		const secondJourney = findMatchingJourney(
 			secondSegment.journeys,
 			splitDeparture
 		);
-		if (!secondJourney) return null;
+
+		if (!secondJourney) {
+			return null;
+		}
 
 		// Calculate pricing
 		const firstPrice = firstJourney.price?.amount || 0;
@@ -310,7 +355,7 @@ async function analyzeSingleSplit(
 
 		return null;
 	} catch (error) {
-		const typedError = error as { message: string }
+		const typedError = error as { message: string };
 		console.log(
 			`Single split analysis error at ${splitPoint.station.name}:`,
 			typedError.message
@@ -322,12 +367,13 @@ async function analyzeSingleSplit(
 function createSplitResult(
 	type: string,
 	splitStations: unknown,
-	segments: Segment[],
+	segments: VendoLeg[],
 	totalPrice: number,
 	originalPrice: number,
-	trainLine: { name?: string, product?: string }
+	trainLine: { name?: string; product?: string }
 ) {
 	const savings = originalPrice - totalPrice;
+
 	return {
 		type: `same-train-${type}-split`,
 		splitStations,
@@ -343,7 +389,10 @@ function createSplitResult(
 	};
 }
 
-function findMatchingJourney(journeys: readonly Journey[], targetDeparture: Date) {
+function findMatchingJourney(
+	journeys: readonly VendoJourney[],
+	targetDeparture: Date
+) {
 	if (!journeys?.length) return null;
 	const expected = targetDeparture.getTime();
 	return (
@@ -357,8 +406,8 @@ function findMatchingJourney(journeys: readonly Journey[], targetDeparture: Date
 
 // Streaming handler for real-time progress updates
 async function handleStreamingResponse(
-	originalJourney: Journey,
-	splitPoints: Station[],
+	originalJourney: VendoJourney,
+	splitPoints: VendoStation[],
 	bahnCard: string,
 	hasDeutschlandTicket: boolean,
 	passengerAge: string,
@@ -425,7 +474,7 @@ async function handleStreamingResponse(
 					encoder.encode(`data: ${JSON.stringify(finalData)}\n\n`)
 				);
 			} catch (error) {
-				const typedError = error as { message?: string }
+				const typedError = error as { message?: string };
 
 				const errorData = {
 					type: "error",

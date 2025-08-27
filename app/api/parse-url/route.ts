@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 		try {
 			// Verwende headless Browser um JavaScript-Redirects zu handhaben
 			finalUrl = await getResolvedUrlBrowserless(url);
-		} catch (browserError) {
+		} catch {
 			console.log(
 				"Browser navigation failed, trying to parse original URL directly"
 			);
@@ -210,7 +210,7 @@ function getSystemChromium() {
   }
 }
 
-async function getResolvedUrl(url: string) {
+async function _getResolvedUrl(url: string) {
 	let browser;
 	try {
 		const launchOptions: LaunchOptions = {

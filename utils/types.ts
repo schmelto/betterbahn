@@ -1,4 +1,4 @@
-import type { Journey, Station } from "hafas-client";
+import type { VendoJourney, VendoOriginOrDestination } from "@/utils/schemas";
 
 export interface ExtractedData {
 	fromStationId?: string | null;
@@ -15,30 +15,11 @@ export interface ExtractedData {
 	error?: unknown;
 }
 
-export interface Updates {
-	bahnCard?: string;
-	passengerAge?: string;
-	hasDeutschlandTicket?: boolean;
-}
-
-export interface FormState {
-	fromStation: string;
-	toStation: string;
-	fromStationId: string;
-	toStationId: string;
-	date: string;
-	time: string;
-	bahnCard: string;
-	hasDeutschlandTicket: boolean;
-	passengerAge: string | number;
-	travelClass: string;
-}
-
 export interface SplitOption {
-	segments: Journey[];
+	segments: VendoJourney[];
 	totalPrice?: number;
 	savings?: number;
-	splitStations: Station[];
+	splitStations: VendoOriginOrDestination[];
 }
 
 export interface ProgressInfo {
@@ -47,5 +28,3 @@ export interface ProgressInfo {
 	currentStation?: string;
 	message?: string;
 }
-
-

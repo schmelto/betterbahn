@@ -1,11 +1,12 @@
-// Hilfsfunktionen für Reiseberechnungen und Formatierung
-
-import type { Journey, Leg, Stop } from "hafas-client";
 import type { ExtractedData } from "./types";
+import type {
+	VendoJourney,
+	VendoLeg,
+	VendoOriginOrDestination,
+} from "@/utils/schemas";
 
 // Formatiere Zeit von ISO-String zu HH:MM
 export const formatTime = (dateString: string) => {
-	if (!dateString) return "Unknown";
 	const date = new Date(dateString);
 
 	if (isNaN(date.getTime())) {
@@ -18,13 +19,13 @@ export const formatTime = (dateString: string) => {
 			hour: "2-digit",
 			minute: "2-digit",
 		});
-	} catch (e) {
+	} catch {
 		return "Invalid time"; // Fallback bei unwahrscheinlichem Locale-Fehler
 	}
 };
 
 // Berechne und formatiere Reisedauer
-export const formatDuration = (journey: { legs: Leg[] }) => {
+export const formatDuration = (journey: { legs: VendoLeg[] }) => {
 	const legs = journey?.legs;
 	if (!legs?.length) return "Unknown duration";
 	const firstLeg = legs[0];
@@ -33,7 +34,9 @@ export const formatDuration = (journey: { legs: Leg[] }) => {
 
 	const departure = new Date(firstLeg.departure);
 	const arrival = new Date(lastLeg.arrival);
-	if (isNaN(departure.getTime()) || isNaN(arrival.getTime())) return "Invalid duration";
+	if (isNaN(departure.getTime()) || isNaN(arrival.getTime())) {
+		return "Invalid duration";
+	}
 
 	const diff = arrival.getTime() - departure.getTime();
 	if (diff < 0) return "Invalid duration";
@@ -43,25 +46,27 @@ export const formatDuration = (journey: { legs: Leg[] }) => {
 	return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 };
 
-// Hole Zuglinie-Informationen aus einem Leg
-export const getLineInfo = (leg: Leg) => {
+export const getLineInfoFromLeg = (leg: VendoLeg) => {
 	if (leg.walking) return null;
 	return leg.line?.name || leg.line?.product || "Unknown";
 };
 
-// Hole Stationsnamen aus Stop-Objekt
-export const getStationName = (stop?: Stop) =>
+export const getStationName = (stop?: VendoOriginOrDestination) =>
 	stop?.station?.name || stop?.name || "Unknown";
 
 // Calculate transfer time in minutes
-export const calculateTransferTime = (leg: Leg) => {
+export const calculateTransferTime = (leg: VendoLeg) => {
 	if (!leg.walking || !leg.departure || !leg.arrival) return 0;
-	return Math.round((new Date(leg.arrival).getTime() - new Date(leg.departure).getTime()) / 60000);
+	return Math.round(
+		(new Date(leg.arrival).getTime() - new Date(leg.departure).getTime()) /
+			60000
+	);
 };
 
 // Filter out walking legs and get non-walking legs with transfer times
-export const getJourneyLegsWithTransfers = (journey: Journey) => {
+export const getJourneyLegsWithTransfers = (journey: VendoJourney) => {
 	const legs = journey?.legs || [];
+
 	return legs
 		.map((leg, i) => {
 			if (leg.walking) return null;
@@ -71,7 +76,7 @@ export const getJourneyLegsWithTransfers = (journey: Journey) => {
 				transferTimeAfter: next?.walking ? calculateTransferTime(next) : 0,
 			};
 		})
-		.filter(Boolean) as (Leg & { transferTimeAfter: number })[];
+		.filter(Boolean) as (VendoLeg & { transferTimeAfter: number })[];
 };
 
 // =================
@@ -79,12 +84,12 @@ export const getJourneyLegsWithTransfers = (journey: Journey) => {
 // =================
 
 /**
- * Searches for journeys using the extracted data
  * @param {Object} extractedData - The journey data extracted from URL
- * @returns {Promise<Array>} Array of journey objects
  * @throws {Error} When API call fails or returns error
  */
-export const searchForJourneys = async (extractedData: ExtractedData) => {
+export const searchForJourneys = async (
+	extractedData: ExtractedData
+): Promise<VendoJourney[]> => {
 	const {
 		fromStationId,
 		toStationId,
@@ -141,7 +146,7 @@ export const searchForJourneys = async (extractedData: ExtractedData) => {
 
 		return data.journeys || [];
 	} catch (error) {
-		const typedError = error as { message: string }
+		const typedError = error as { message: string };
 
 		// Re-throw with more user-friendly message if it's a network error
 		if (typedError.message.includes("fetch")) {

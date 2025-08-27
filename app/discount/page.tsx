@@ -1,13 +1,17 @@
 "use client";
-// Importiere notwendige React-Hooks und Komponenten
-import JourneyResults from "@/components/JourneyResults";
-import SplitOptions from "@/components/SplitOptions";
-import type { VendoJourney } from "@/schemas/vendoJourney";
+import { JourneyResults } from "@/components/JourneyResults";
+import { SplitOptions } from "@/components/SplitOptions/SplitOptions";
 import { searchForJourneys, validateJourneyData } from "@/utils/journeyUtils";
+import type { VendoJourney, VendoPrice } from "@/utils/schemas";
 import type { ExtractedData, ProgressInfo, SplitOption } from "@/utils/types";
-import type { Journey, Price } from "hafas-client";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+	Suspense,
+	useCallback,
+	useEffect,
+	useState,
+	type ReactNode,
+} from "react";
 
 // Konstanten für Lademeldungen
 const LOADING_MESSAGES = {
@@ -28,7 +32,7 @@ const STATUS = {
 	ERROR: "error",
 } as const;
 
-type Status = typeof STATUS[keyof typeof STATUS]
+type Status = (typeof STATUS)[keyof typeof STATUS];
 
 // Hilfsfunktionen für Formatierung
 
@@ -42,7 +46,7 @@ const formatTime = (dateTime?: string) => {
 };
 
 // Formatiere Reisedauer
-const formatDuration = (journey: Journey) => {
+const formatDuration = (journey: VendoJourney) => {
 	if (!journey?.legs || journey.legs.length === 0) return "";
 	const departure = new Date(journey.legs[0].departure);
 	const arrival = new Date(journey.legs[journey.legs.length - 1].arrival);
@@ -53,33 +57,27 @@ const formatDuration = (journey: Journey) => {
 };
 
 // Zähle Anzahl der Umstiege
-const getChangesCount = (journey: Journey) => {
+const getChangesCount = (journey: VendoJourney) => {
 	if (!journey?.legs) return 0;
 	return Math.max(0, journey.legs.length - 1);
 };
 
-// Formatiere Preis für Anzeige
-const formatPrice = (price: Price) => {
+const formatPriceWithTwoDecimals = (price: VendoPrice | number) => {
 	if (typeof price === "object") {
-		return `${price.amount} ${price.currency || "€"}`;
+		return `${price.amount.toFixed(2).replace(".", ",")}€`;
 	}
-	return `${price}€`;
+
+	return `${price.toFixed(2).replace(".", ",")}€`;
 };
 
-const formatPriceWithTwoDecimals = (price: Price | number) => {
-	if (typeof price === "object") {
-		const amount = parseFloat(price.amount);
-		return `${amount.toFixed(2).replace(".", ",")}€`;
-	}
-	const amount = parseFloat(price);
-	return `${amount.toFixed(2).replace(".", ",")}€`;
-};
-
-// --- Component: Status Box ---
-function StatusBox({ message, isLoading, progressInfo }: {
-	message: string
-	isLoading: boolean
-	progressInfo?: ProgressInfo
+function StatusBox({
+	message,
+	isLoading,
+	progressInfo,
+}: {
+	message: string;
+	isLoading: boolean;
+	progressInfo?: ProgressInfo;
 }) {
 	return (
 		<div className="w-full mb-6">
@@ -149,7 +147,7 @@ function JourneyIcon() {
 }
 
 // --- Component: Journey Info Row ---
-function JourneyInfoRow({ children }: { children: ReactNode}) {
+function JourneyInfoRow({ children }: { children: ReactNode }) {
 	return (
 		<div className="text-sm text-gray-500 my-2 pl-1 flex items-center">
 			{children}
@@ -158,8 +156,12 @@ function JourneyInfoRow({ children }: { children: ReactNode}) {
 }
 
 // --- Component: Original Journey Card ---
-function OriginalJourneyCard({ extractedData, selectedJourney }: {
-	extractedData: ExtractedData, selectedJourney: Journey
+function OriginalJourneyCard({
+	extractedData,
+	selectedJourney,
+}: {
+	extractedData: ExtractedData;
+	selectedJourney: VendoJourney;
 }) {
 	if (!extractedData) return null;
 
@@ -278,10 +280,10 @@ function SplitOptionsCard({
 	extractedData,
 	status,
 }: {
-	splitOptions?: SplitOption[]
-	extractedData?: ExtractedData
-	selectedJourney?: Journey
-	status?: Status
+	splitOptions?: SplitOption[];
+	extractedData?: ExtractedData;
+	selectedJourney?: VendoJourney;
+	status?: Status;
 }) {
 	const renderContent = () => {
 		if (status === STATUS.SELECTING) {
@@ -312,7 +314,6 @@ function SplitOptionsCard({
 					originalJourney={selectedJourney}
 					loadingSplits={false}
 					hasDeutschlandTicket={extractedData?.hasDeutschlandTicket || false}
-					bahnCard={extractedData?.bahnCard || "none"}
 				/>
 			);
 		}
@@ -357,97 +358,105 @@ function ErrorDisplay({ error }: { error: string }) {
 	);
 }
 
-// --- Main Component ---
 function Discount() {
 	const searchParams = useSearchParams();
 
 	// State
 	const [status, setStatus] = useState<Status>(STATUS.LOADING);
-	const [journeys, setJourneys] = useState([]);
-	const [extractedData, setExtractedData] = useState<ExtractedData|null>(null);
+	const [journeys, setJourneys] = useState<VendoJourney[]>([]);
+	const [extractedData, setExtractedData] = useState<ExtractedData | null>(
+		null
+	);
 	const [error, setError] = useState("");
-	const [selectedJourney, setSelectedJourney] = useState<VendoJourney|null>(null);
+	const [selectedJourney, setSelectedJourney] = useState<VendoJourney | null>(
+		null
+	);
 	const [splitOptions, setSplitOptions] = useState(null);
 	const [loadingMessage, setLoadingMessage] = useState(
 		LOADING_MESSAGES.initial
 	);
-	const [progressInfo, setProgressInfo] = useState<ProgressInfo|null>(null); // New state for progress tracking
+	const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null); // New state for progress tracking
 
 	// Handlers
-	const analyzeSplitOptions = useCallback(async (journey: VendoJourney, journeyData: ExtractedData) => {
-		setStatus(STATUS.ANALYZING);
-		setLoadingMessage(LOADING_MESSAGES.analyzing);
-		setProgressInfo(null);
+	const analyzeSplitOptions = useCallback(
+		async (journey: VendoJourney, journeyData: ExtractedData) => {
+			setStatus(STATUS.ANALYZING);
+			setLoadingMessage(LOADING_MESSAGES.analyzing);
+			setProgressInfo(null);
 
-		try {
-			const response = await fetch("/api/split-journey", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					originalJourney: journey,
-					bahnCard: journeyData?.bahnCard || "none",
-					hasDeutschlandTicket: journeyData?.hasDeutschlandTicket || false,
-					passengerAge: journeyData?.passengerAge?.trim()
-						? parseInt(journeyData.passengerAge.trim())
-						: null,
-					travelClass: journeyData?.travelClass || "2",
-					useStreaming: true, // Enable streaming for progress updates
-				}),
-			});
+			try {
+				const response = await fetch("/api/split-journey", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						originalJourney: journey,
+						bahnCard: journeyData?.bahnCard || "none",
+						hasDeutschlandTicket: journeyData?.hasDeutschlandTicket || false,
+						passengerAge: journeyData?.passengerAge?.trim()
+							? parseInt(journeyData.passengerAge.trim())
+							: null,
+						travelClass: journeyData?.travelClass || "2",
+						useStreaming: true, // Enable streaming for progress updates
+					}),
+				});
 
-			if (!response.ok) {
-				throw new Error("Failed to analyze split options");
-			}
+				if (!response.ok) {
+					throw new Error("Failed to analyze split options");
+				}
 
-			// Handle Server-Sent Events
-			const reader = response.body!.getReader();
-			const decoder = new TextDecoder();
-			let buffer = "";
+				// Handle Server-Sent Events
+				const reader = response.body!.getReader();
+				const decoder = new TextDecoder();
+				let buffer = "";
 
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
 
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split("\n");
-				buffer = lines.pop(); // Keep incomplete line in buffer
+					buffer += decoder.decode(value, { stream: true });
+					const lines = buffer.split("\n");
+					buffer = lines.pop()!; // Keep incomplete line in buffer
 
-				for (const line of lines) {
-					if (line.startsWith("data: ")) {
-						try {
-							const data = JSON.parse(line.slice(6));
+					for (const line of lines) {
+						if (line.startsWith("data: ")) {
+							try {
+								const data = JSON.parse(line.slice(6));
 
-							if (data.type === "progress") {
-								setProgressInfo({
-									checked: data.checked,
-									total: data.total,
-									currentStation: data.currentStation,
-								});
-								setLoadingMessage(data.message);
-							} else if (data.type === "complete") {
-								setSplitOptions(data.splitOptions || []);
-								setStatus(STATUS.DONE);
-								setProgressInfo(null);
-							} else if (data.type === "error") {
-								throw new Error(data.error);
+								if (data.type === "progress") {
+									setProgressInfo({
+										checked: data.checked,
+										total: data.total,
+										currentStation: data.currentStation,
+									});
+									setLoadingMessage(data.message);
+								} else if (data.type === "complete") {
+									setSplitOptions(data.splitOptions || []);
+									setStatus(STATUS.DONE);
+									setProgressInfo(null);
+								} else if (data.type === "error") {
+									throw new Error(data.error);
+								}
+							} catch (parseError) {
+								console.error("Error parsing SSE data:", parseError);
 							}
-						} catch (parseError) {
-							console.error("Error parsing SSE data:", parseError);
 						}
 					}
 				}
+			} catch (err) {
+				const typedErr = err as { message?: string };
+				console.error("Error analyzing split options:", err);
+				setError(
+					typedErr.message || "Fehler bei der Analyse der Split-Optionen."
+				);
+				setStatus(STATUS.ERROR);
+				setProgressInfo(null);
 			}
-		} catch (err) {
-			const typedErr = err as { message?: string }
-			console.error("Error analyzing split options:", err);
-			setError(typedErr.message || "Fehler bei der Analyse der Split-Optionen.");
-			setStatus(STATUS.ERROR);
-			setProgressInfo(null);
-		}
-	}, []);
+		},
+		[]
+	);
 
 	const handleJourneySelect = useCallback(
-		(journey: Journey) => {
+		(journey: VendoJourney) => {
 			setSelectedJourney(journey);
 			setSplitOptions(null);
 
@@ -510,7 +519,9 @@ function Discount() {
 
 				// Search for journeys
 				setLoadingMessage(LOADING_MESSAGES.searching);
-				const foundJourneys = await searchForJourneys(journeyData) as VendoJourney[];
+				const foundJourneys = (await searchForJourneys(
+					journeyData
+				)) as VendoJourney[];
 
 				if (foundJourneys.length === 1) {
 					setLoadingMessage(LOADING_MESSAGES.single_journey_flow);
@@ -524,7 +535,7 @@ function Discount() {
 					setStatus(STATUS.DONE);
 				}
 			} catch (err) {
-				const typedErr = err as { message: string }
+				const typedErr = err as { message: string };
 				setError(typedErr.message);
 				setStatus(STATUS.ERROR);
 			}
@@ -562,11 +573,6 @@ function Discount() {
 						</h3>
 						<JourneyResults
 							journeys={journeys}
-							bahnCard={extractedData?.bahnCard || "none"}
-							hasDeutschlandTicket={
-								extractedData?.hasDeutschlandTicket || false
-							}
-							passengerAge={extractedData?.passengerAge || ""}
 							travelClass={extractedData?.travelClass || "2"}
 							onJourneySelect={handleJourneySelect}
 							selectedJourney={selectedJourney}

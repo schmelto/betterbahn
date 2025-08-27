@@ -1,19 +1,21 @@
-// Importiere DB Vendo Client und notwendige Utilities
+// @ts-ignore
 import { createClient } from "db-vendo-client";
+// @ts-ignore
 import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
+// @ts-ignore
 import { profile as dbProfile } from "db-vendo-client/p/db/index";
-import type { HafasClient, LoyaltyCard } from "hafas-client";
+
+import { vendoJourneySchema } from "@/utils/schemas";
+import { z } from "zod/v4";
 import {
 	getApiCount,
 	incrementApiCount,
 	resetApiCount,
 } from "../../../utils/apiCounter";
-import { z } from "zod/v4";
-import { vendoJourneySchema } from "@/schemas/vendoJourney";
 
 // Konfiguriere den DB-Client
 const userAgent = "mail@lukasweihrauch.de";
-const client: HafasClient = createClient(dbProfile, userAgent);
+const client = createClient(dbProfile, userAgent);
 
 interface SearchJourneysOptions {
 	results: number;
@@ -23,7 +25,7 @@ interface SearchJourneysOptions {
 	transfers: number;
 	firstClass: boolean;
 	departure?: Date;
-	loyaltyCard?: LoyaltyCard;
+	loyaltyCard?: unknown;
 	age?: number;
 	deutschlandTicketDiscount?: boolean;
 	deutschlandTicketConnectionsOnly?: boolean;
