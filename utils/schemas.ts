@@ -17,7 +17,7 @@ const vendoLocationSchema = z.object({
 	name: z.string().optional(),
 });
 
-const vendoPriceSchema = z.object({ amount: z.number(), hint: z.string().optional() });
+const vendoPriceSchema = z.object({ amount: z.number(), hint: z.string().nullable().optional() });
 
 export type VendoPrice = z.infer<typeof vendoPriceSchema>
 
