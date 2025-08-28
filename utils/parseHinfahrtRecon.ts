@@ -13,7 +13,16 @@ export const parseHinfahrtReconCrude = (hinfahrtRecon: string) => {
 };
 
 export const parseHinfahrtRecon = (hinfahrtRecon: string) => {
-	// hinfahrtRecon ist ein verfluchtes format.
+	/**
+	 * This is an attempt to parse the hinfahrtRecon value in contrast to the straight-forward
+	 * regex of parseHinfartReconCrude().
+	 * hinfahrtRecon is a rather bizarre and non-standard format, with some but not all parts
+	 * encoded with base64, gzip, and/or containing a JSON string, and with at least
+	 * two different kinds of string separators, only one of which ("¶") this code *should* need.
+	 * Parsing hinfahrtRecon like this was successful at least once,
+	 * but gunzipping (gzip decompression) failed at other times
+	 * which is why this function is not (yet) used.
+	 */
 
 	const sections = hinfahrtRecon.split("¶");
 	const scIndex = sections.findIndex((s) => s === "SC");
