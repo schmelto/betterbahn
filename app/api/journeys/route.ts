@@ -1,8 +1,5 @@
-// @ts-ignore
-import { createClient } from "db-vendo-client";
-// @ts-ignore
+import { createClient, type SearchJourneysOptions } from "db-vendo-client";
 import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
-// @ts-ignore
 import { profile as dbProfile } from "db-vendo-client/p/db/index";
 
 import { vendoJourneySchema } from "@/utils/schemas";
@@ -13,23 +10,8 @@ import {
 	resetApiCount,
 } from "../../../utils/apiCounter";
 
-// Konfiguriere den DB-Client
 const userAgent = "mail@lukasweihrauch.de";
 const client = createClient(dbProfile, userAgent);
-
-interface SearchJourneysOptions {
-	results: number;
-	stopovers: boolean;
-	notOnlyFastRoutes: boolean;
-	remarks: boolean;
-	transfers: number;
-	firstClass: boolean;
-	departure?: Date;
-	loyaltyCard?: unknown;
-	age?: number;
-	deutschlandTicketDiscount?: boolean;
-	deutschlandTicketConnectionsOnly?: boolean;
-}
 
 // GET-Route für Verbindungssuche
 export async function GET(request: Request) {
