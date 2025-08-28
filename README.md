@@ -46,15 +46,17 @@ TRAEFIK_NETWORK=rp
 
 ## License
 
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0). See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the AGPL-3.0-only. See the [LICENSE](./LICENSE) file for details.
 
-## Community
+## Community and Contribution
 
-Join the [Discord community](https://discord.gg/eDZF75HG) to ask questions, share feedback, and connect with other users and contributors.
+Join the [Discord community](https://discord.gg/pQr9dv5S) to ask questions, share feedback, and connect with other users and contributors.
+
+Want to contribute? Please read the [Code of Conduct](/CODE_OF_CONDUCT.md) and see the [Contributing Guide](/CONTRIBUTE.md) for details on how to get started.
 
 ## How it works
 
-BetterBahn searches for train journeys and can use split ticketing to help you find cheaper options—though this is usually the exception, not the rule. For a detailed explanation and demonstration, check out the [YouTube video](https://www.youtube.com/watch?v=SxKtI8f5QTU&t=1s).
+BetterBahn searches for train journeys and can use split ticketing to help you find cheaper options—though this is usually the exception, not the rule. For a detailed explanation and demonstration, check out the [YouTube video](https://www.youtube.com/watch?v=SxKtI8f5QTU).
 
 ## About the Author
 
@@ -65,5 +67,3 @@ If you like what I do, consider supporting me: [ko-fi.com/lukasweihrauch](https:
 ---
 
 Made with ❤️ for train travelers in Germany.
-
----

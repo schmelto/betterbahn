@@ -9,6 +9,3 @@ dist/
 
 # Enviroment files
 .env
-
-# etc
-.DS_Store
