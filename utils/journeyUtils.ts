@@ -51,6 +51,13 @@ export const getLineInfoFromLeg = (leg: VendoLeg) => {
 	return leg.line?.name || leg.line?.product || "Unknown";
 };
 
+/**
+ * TODO:
+ * looking at the original code, it's unclear to me which type of arg
+ * this function exactly permits.
+ * it's called with leg.origin and leg.destination, which can be stations,
+ * stops, or locations, not *just* stops.
+ */
 export const getStationName = (stop?: VendoOriginOrDestination) =>
 	stop?.station?.name || stop?.name || "Unknown";
 

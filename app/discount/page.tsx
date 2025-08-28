@@ -183,6 +183,12 @@ function OriginalJourneyCard({
             isLegCoveredByDeutschlandTicket(leg, hasDeutschlandTicket)
         );
 
+				/**
+				 * TODO formatPriceWithTwoDecimals doesn't handle undefined values,
+				 * but the property on journey (VendoJourney) may not be present.
+				 * this is either an oversight in the implementation or the schema / type defs i wrote.
+				 */
+
     const formattedPrice = formatPriceWithTwoDecimals(selectedJourney.price);
     let priceDisplay;
 
@@ -400,7 +406,7 @@ function Discount() {
 	const [selectedJourney, setSelectedJourney] = useState<VendoJourney | null>(
 		null
 	);
-	const [splitOptions, setSplitOptions] = useState(null);
+	const [splitOptions, setSplitOptions] = useState<SplitOption[]|null>(null);
 	const [loadingMessage, setLoadingMessage] = useState(
 		LOADING_MESSAGES.initial
 	);
@@ -610,7 +616,7 @@ function Discount() {
 				)}
 
 				{/* Comparison View */}
-				{selectedJourney && (
+				{selectedJourney && extractedData && splitOptions && (
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 						<div className="bg-white rounded-lg shadow p-6">
 							<OriginalJourneyCard

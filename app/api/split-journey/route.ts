@@ -1,11 +1,9 @@
-import type { VendoJourney, VendoLeg, VendoStation } from "@/utils/schemas";
-import type { ProgressInfo } from "@/utils/types.js";
-// @ts-ignore
+import { vendoJourneySchema, type VendoJourney } from "@/utils/schemas";
+import type { ProgressInfo, SplitPoint, TrainLine } from "@/utils/types.js";
 import { createClient } from "db-vendo-client";
-// @ts-ignore
 import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
-// @ts-ignore
 import { profile as dbProfile } from "db-vendo-client/p/db/index";
+import { z } from "zod/v4";
 import { getApiCount, incrementApiCount } from "../../../utils/apiCounter";
 
 const client = createClient(dbProfile, "mail@lukasweihrauch.de");
@@ -190,7 +188,7 @@ function extractSplitPoints(journey: VendoJourney) {
 
 async function analyzeSplitPoints(
 	originalJourney: VendoJourney,
-	splitPoints: VendoStation[],
+	splitPoints: SplitPoint[],
 	queryOptions: QueryOptions,
 	originalPrice: number,
 	{
@@ -205,7 +203,7 @@ async function analyzeSplitPoints(
 			`\n🔍 Analyse von ${splitPoints.length} Split-Stationen gestartet (streaming=${streaming})`
 		);
 
-	const processBatch = async (points: VendoStation[]) => {
+	const processBatch = async (points: SplitPoint[]) => {
 		const results = await Promise.allSettled(
 			points.map((sp) =>
 				analyzeSingleSplit(originalJourney, sp, queryOptions, originalPrice)
@@ -278,7 +276,7 @@ async function analyzeSplitPoints(
 // Split Analysis Functions
 async function analyzeSingleSplit(
 	originalJourney: VendoJourney,
-	splitPoint: { departure: string; station: VendoStation; trainLine: unknown },
+	splitPoint: SplitPoint,
 	queryOptions: QueryOptions,
 	originalPrice: number
 ) {
@@ -300,7 +298,8 @@ async function analyzeSingleSplit(
 		);
 
 		// Make both API calls in parallel using Promise.all
-		const [firstSegment, secondSegment] = await Promise.all([
+		const [firstSegmentUntyped, secondSegmentUntyped] = await Promise.all([
+			/** TODO origin and destination can be undefined, there's probably a check (type-gate) with error handling missing here */
 			client.journeys(origin?.id, splitPoint.station.id, {
 				...queryOptions,
 				departure: originalDeparture,
@@ -311,6 +310,12 @@ async function analyzeSingleSplit(
 				departure: splitDeparture,
 			}),
 		]);
+
+		const clientJourneySchema = z.object({
+			journeys: z.array(vendoJourneySchema),
+		});
+		const firstSegment = clientJourneySchema.parse(firstSegmentUntyped);
+		const secondSegment = clientJourneySchema.parse(secondSegmentUntyped);
 
 		if (
 			firstSegment.journeys === undefined ||
@@ -367,10 +372,10 @@ async function analyzeSingleSplit(
 function createSplitResult(
 	type: string,
 	splitStations: unknown,
-	segments: VendoLeg[],
+	segments: VendoJourney[],
 	totalPrice: number,
 	originalPrice: number,
-	trainLine: { name?: string; product?: string }
+	trainLine?: TrainLine
 ) {
 	const savings = originalPrice - totalPrice;
 
@@ -407,7 +412,7 @@ function findMatchingJourney(
 // Streaming handler for real-time progress updates
 async function handleStreamingResponse(
 	originalJourney: VendoJourney,
-	splitPoints: VendoStation[],
+	splitPoints: SplitPoint[],
 	bahnCard: string,
 	hasDeutschlandTicket: boolean,
 	passengerAge: string,

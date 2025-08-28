@@ -69,6 +69,13 @@ export function createSegmentSearchUrl(
 
 	// TODO diesen code zu new URL -> .searchParams.set() usw porten
 
+	/**
+	 * TODO looking at the original code, the majority treats origin and destination
+	 * as optional / possibly undefined properties.
+	 * the following logic, from the original code, doesn't treat them as such, which could be an oversight.
+	 * i did not find any checking logic further up the component/call stack that ensures their presence.
+	 */
+
 	const parts = [
 		"sts=true",
 		`so=${encodeURIComponent(firstLeg.origin.name)}`,

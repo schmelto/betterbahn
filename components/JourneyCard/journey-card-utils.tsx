@@ -18,6 +18,13 @@ export const formatDuration = (duration: unknown) => {
 		return null;
 	}
 
+	/**
+	 * TODO since "duration.match" is called and considering the code near the end of this function,
+	 * it looks like duration must be string because after the truthiness check above, .match is called unconditionally.
+	 * but if that's the case, the "object" check in the middle of this function would be dead code because a string should (can?) never be also an object.
+	 * this is likely an oversight / bug or dead code.
+	 */
+
 	// Behandle ISO 8601 Dauerformat (PT1H30M)
 	const match = duration.match(/PT(\d+H)?(\d+M)?/);
 	if (match) {

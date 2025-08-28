@@ -1,4 +1,4 @@
-import type { VendoJourney, VendoOriginOrDestination } from "@/utils/schemas";
+import type { VendoJourney, VendoOriginOrDestination, VendoStation } from "@/utils/schemas";
 
 export interface ExtractedData {
 	fromStationId?: string | null;
@@ -27,4 +27,15 @@ export interface ProgressInfo {
 	total: number;
 	currentStation?: string;
 	message?: string;
+}
+
+export interface TrainLine {
+	name?: string
+	product?: string
+}
+
+export interface SplitPoint {
+	departure: string;
+	station: VendoStation;
+	trainLine?: TrainLine;
 }
