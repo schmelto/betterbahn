@@ -12,6 +12,7 @@
     "deploy": "docker build"
   },
   "dependencies": {
+    "db-hafas-stations": "^2.0.0",
     "db-vendo-client": "^6.8.2",
     "hafas-client": "^6.3.5",
     "next": "15.3.4",
