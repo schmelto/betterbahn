@@ -12,7 +12,7 @@ WORKDIR /app
 # Verhindert, dass Puppeteer beim Installieren Chromium herunterlädt.
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-COPY package.json package-lock.json ./
+COPY package.json pnpm-lock.yaml ./
 # Führt pnpm install aus, ohne den Browser herunterzuladen
 RUN pnpm install
 
