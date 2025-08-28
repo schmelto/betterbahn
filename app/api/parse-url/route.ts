@@ -1,63 +1,56 @@
 import { parseHinfahrtReconWithAPI } from "@/utils/parseHinfahrtRecon";
 import type { ExtractedData } from "@/utils/types";
 import { z } from "zod/v4";
+import { apiErrorHandler } from "../_lib/error-handler";
 
 // POST-Route für URL-Parsing
-export async function POST(request: Request) {
-	try {
-		// Request-Body extrahieren
-		const body = await request.json();
-		const { url } = body;
+const handler = async (request: Request) => {
+	// Request-Body extrahieren
+	const body = await request.json();
+	const { url } = body;
 
-		// Überprüfe ob URL vorhanden ist
-		if (!url) {
-			return Response.json(
-				{ error: "Missing required parameter: url" },
-				{ status: 400 }
-			);
-		}
-
-		let finalUrl;
-		try {
-			finalUrl = await getResolvedUrlBrowserless(url);
-		} catch {
-			console.log(
-				"Resolving URL failed, trying to parse original URL directly"
-			);
-			finalUrl = url;
-		}
-
-		// Reisedetails aus der aufgelösten URL extrahieren
-		const journeyDetails = extractJourneyDetails(finalUrl);
-
-		if ("error" in journeyDetails) {
-			return Response.json({
-				error: journeyDetails.error,
-			});
-		}
-
-		if (!journeyDetails.fromStationId || !journeyDetails.toStationId) {
-			return Response.json({
-				error: "journeyDetails is missing fromStationId or toStationId",
-			});
-		}
-
-		// Vereinfachte Reiseinformationen anzeigen
-		displayJourneyInfo(journeyDetails);
-
-		return Response.json({
-			success: true,
-			journeyDetails: journeyDetails,
-		});
-	} catch (error) {
-		const typedError = error as { message: string };
-		console.error("Error parsing URL:", error);
-
+	// Überprüfe ob URL vorhanden ist
+	if (!url) {
 		return Response.json(
-			{ error: "Failed to parse URL", details: typedError.message },
-			{ status: 500 }
+			{ error: "Missing required parameter: url" },
+			{ status: 400 }
 		);
 	}
+
+	let finalUrl;
+	try {
+		finalUrl = await getResolvedUrlBrowserless(url);
+	} catch {
+		console.log("Resolving URL failed, trying to parse original URL directly");
+		finalUrl = url;
+	}
+
+	// Reisedetails aus der aufgelösten URL extrahieren
+	const journeyDetails = extractJourneyDetails(finalUrl);
+
+	if ("error" in journeyDetails) {
+		return Response.json({
+			error: journeyDetails.error,
+		});
+	}
+
+	if (!journeyDetails.fromStationId || !journeyDetails.toStationId) {
+		return Response.json({
+			error: "journeyDetails is missing fromStationId or toStationId",
+		});
+	}
+
+	// Vereinfachte Reiseinformationen anzeigen
+	displayJourneyInfo(journeyDetails);
+
+	return Response.json({
+		success: true,
+		journeyDetails: journeyDetails,
+	});
+};
+
+export async function POST(request: Request) {
+	return apiErrorHandler(() => handler(request));
 }
 
 function extractJourneyDetails(url: string) {

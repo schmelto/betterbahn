@@ -5,6 +5,7 @@ import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
 import { profile as dbProfile } from "db-vendo-client/p/db/index";
 import { z } from "zod/v4";
 import { getApiCount, incrementApiCount } from "../../../utils/apiCounter";
+import { apiErrorHandler } from "../_lib/error-handler";
 
 const client = createClient(dbProfile, "mail@lukasweihrauch.de");
 
@@ -14,84 +15,77 @@ const DEFAULT_BATCH_SIZE = 1; // Konservativ für Rate-Limits
 const VERBOSE = true; // Ausführliche Logs ein/ausschalten
 
 // POST-Route für Split-Journey Analyse
-export async function POST(request: Request) {
-	try {
-		// Übergebene Daten aus der Anfrage extrahieren
-		const {
-			originalJourney,
-			bahnCard,
-			hasDeutschlandTicket,
-			passengerAge,
-			travelClass,
-			useStreaming,
-		} = await request.json();
+const handler = async (request: Request) => {
+	// Übergebene Daten aus der Anfrage extrahieren
+	const {
+		originalJourney,
+		bahnCard,
+		hasDeutschlandTicket,
+		passengerAge,
+		travelClass,
+		useStreaming,
+	} = await request.json();
 
-		// Validiere dass originalJourney vorhanden ist
-		if (!originalJourney?.legs) {
-			return Response.json(
-				{ error: "Missing originalJourney" },
-				{ status: 400 }
-			);
-		}
+	// Validiere dass originalJourney vorhanden ist
+	if (!originalJourney?.legs) {
+		return Response.json({ error: "Missing originalJourney" }, { status: 400 });
+	}
 
-		// Split-Kandidaten aus vorhandenen Legs ableiten (keine zusätzlichen API Calls)
-		const splitPoints = extractSplitPoints(originalJourney);
+	// Split-Kandidaten aus vorhandenen Legs ableiten (keine zusätzlichen API Calls)
+	const splitPoints = extractSplitPoints(originalJourney);
 
-		if (splitPoints.length === 0) {
-			return Response.json({
-				success: true,
-				splitOptions: [],
-				message: "No split points found",
-			});
-		}
-
-		// Behandle Streaming-Response falls gewünscht
-		if (useStreaming) {
-			return handleStreamingResponse(
-				originalJourney,
-				splitPoints,
-				bahnCard,
-				hasDeutschlandTicket,
-				passengerAge,
-				travelClass
-			);
-		}
-
-		// Baue die Abfrageoptionen basierend auf den übergebenen Parametern wie bahnCard, db-ticket usw.
-		const queryOptions = buildQueryOptions({
-			bahnCard,
-			hasDeutschlandTicket,
-			passengerAge,
-			travelClass,
-		});
-
-		// Speichert den Originalpreis der Reise, um ihn später für die Einsparungsberechnung zu verwenden
-		const originalPrice = originalJourney.price?.amount || 0;
-
-		const splitOptions = await analyzeSplitPoints(
-			originalJourney,
-			splitPoints,
-			queryOptions,
-			originalPrice
-		);
-
-		console.log(
-			`\n✅ SPLIT ANALYSIS COMPLETED - Total API calls: ${getApiCount()}\n`
-		);
-
-		// Gibt die Ergebnisse als JSON zurück
+	if (splitPoints.length === 0) {
 		return Response.json({
 			success: true,
-			splitOptions: splitOptions.sort((a, b) => b.savings - a.savings),
-			originalPrice,
+			splitOptions: [],
+			message: "No split points found",
 		});
-	} catch (error) {
-		console.error("Split analysis error:", error);
-		return Response.json(
-			{ error: "Failed to analyze split journeys" },
-			{ status: 500 }
+	}
+
+	// Behandle Streaming-Response falls gewünscht
+	if (useStreaming) {
+		return handleStreamingResponse(
+			originalJourney,
+			splitPoints,
+			bahnCard,
+			hasDeutschlandTicket,
+			passengerAge,
+			travelClass
 		);
 	}
+
+	// Baue die Abfrageoptionen basierend auf den übergebenen Parametern wie bahnCard, db-ticket usw.
+	const queryOptions = buildQueryOptions({
+		bahnCard,
+		hasDeutschlandTicket,
+		passengerAge,
+		travelClass,
+	});
+
+	// Speichert den Originalpreis der Reise, um ihn später für die Einsparungsberechnung zu verwenden
+	const originalPrice = originalJourney.price?.amount || 0;
+
+	const splitOptions = await analyzeSplitPoints(
+		originalJourney,
+		splitPoints,
+		queryOptions,
+		originalPrice
+	);
+
+	console.log(
+		`\n✅ SPLIT ANALYSIS COMPLETED - Total API calls: ${getApiCount()}\n`
+	);
+
+	// Gibt die Ergebnisse als JSON zurück
+	return Response.json({
+		success: true,
+		splitOptions: splitOptions.sort((a, b) => b.savings - a.savings),
+		originalPrice,
+	});
+};
+
+export async function POST(request: Request) {
+	return apiErrorHandler(() => handler(request));
 }
 
 interface QueryOptions {
