@@ -24,7 +24,7 @@ You can also build and run BetterBahn as a Docker container. A `Dockerfile` is i
 
 ## License
 
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0). See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the AGPL-3.0-only. See the [LICENSE](./LICENSE) file for details.
 
 ## Community and Contribution
 
