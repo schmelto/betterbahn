@@ -1,6 +1,6 @@
 services:
     betterbahn:
-        build:
+        image: ghcr.io/l2xu/betterbahn:testing-main
             context: .
             dockerfile: Dockerfile
         restart: unless-stopped
