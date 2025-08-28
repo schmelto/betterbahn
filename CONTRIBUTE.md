@@ -61,7 +61,7 @@ Code contributions are the heart of an open-source project. Here is the basic wo
 7.  **Run the tests (Not implemented yet!):** Ensure that all tests pass successfully.
     ```bash
     # Example command, adapt it for your project
-    npm test
+    pnpm test
     ```
 8.  **Commit your changes:** Write a clear and concise commit message (see [Style Guides](#git-commit-messages)).
     ```bash
