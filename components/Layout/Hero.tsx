@@ -1,5 +1,5 @@
 import React from "react";
-import train from "../public/train.jpg";
+import train from "../../public/train.jpg";
 
 export const Hero = () => {
 	return (
