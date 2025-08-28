@@ -23,7 +23,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Erneut setzen, um sicherzugehen
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV NEXT_TELEMETRY_DISABLED=1
+
 RUN pnpm run build
+
 
 # Stufe 3: Finale, produktive Stufe
 FROM base AS runner
@@ -69,6 +72,8 @@ RUN apk add --no-cache \
 
 ENV NODE_ENV=production
 ENV USE_CHROMIUM_PATH=true
+ENV NEXT_TELEMETRY_DISABLED=1
+
 
 # Kopieren des Standalone-Outputs aus der Builder-Stufe
 COPY --from=builder /app/.next/standalone ./

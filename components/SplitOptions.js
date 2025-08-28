@@ -259,8 +259,8 @@ const SplitOptions = ({
 	if (!splitOptions || splitOptions.length === 0) {
 		return (
 			<div className="text-center py-4">
-				<p className="text-gray-600">No cheaper split options found.</p>
-				<p className="text-xs text-gray-500 mt-1">
+				<p className="text-foreground/70">No cheaper split options found.</p>
+				<p className="text-xs text-foreground/60 mt-1">
 					The direct journey appears to be the most cost-effective option.
 				</p>
 			</div>
@@ -312,7 +312,7 @@ const SplitOptions = ({
 							className={`border rounded-lg overflow-hidden shadow-sm transition-all duration-300 ${
 								splitPricing.hasPartialPricing
 									? "border-orange-300 bg-orange-50"
-									: "border-gray-200 bg-white"
+									: "border-foreground/20 bg-background"
 							} ${isExpanded ? "shadow-lg" : ""}`}
 						>
 							<div
@@ -325,7 +325,7 @@ const SplitOptions = ({
 									<div className="flex flex-col items-center mr-4 pt-1">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
-											className="h-6 w-6 text-gray-600"
+											className="h-6 w-6 text-foreground/70"
 											fill="none"
 											viewBox="0 0 24 24"
 											stroke="currentColor"
@@ -337,8 +337,8 @@ const SplitOptions = ({
 												d="M6 20h12M6 16h12M8 16V9a4 4 0 014-4h0a4 4 0 014 4v7"
 											/>
 										</svg>
-										<div className="h-16 w-px bg-gray-300 my-2"></div>
-										<div className="w-2.5 h-2.5 rounded-full bg-gray-500"></div>
+										<div className="h-16 w-px bg-foreground/30 my-2"></div>
+										<div className="w-2.5 h-2.5 rounded-full bg-foreground/60"></div>
 									</div>
 
 									<div className="flex-grow">
@@ -367,7 +367,7 @@ const SplitOptions = ({
 															Spare{" "}
 															{formatPriceDE(splitPricing.adjustedSavings)}
 														</div>
-														<div className="text-xl font-bold text-gray-900">
+														<div className="text-xl font-bold text-foreground">
 															{formatPriceDE(splitPricing.adjustedTotalPrice)}
 															{splitPricing.hasPartialPricing && (
 																<span className="text-orange-600 ml-1">*</span>
@@ -378,7 +378,7 @@ const SplitOptions = ({
 											</div>
 										</div>
 
-										<div className="text-sm text-gray-500 my-2 pl-1 flex items-center">
+										<div className="text-sm text-foreground/60 my-2 pl-1 flex items-center">
 											<span>
 												{formatDuration({ legs: [departureLeg, arrivalLeg] })}
 											</span>
@@ -394,7 +394,7 @@ const SplitOptions = ({
 
 										{splitOption.splitStations &&
 											splitOption.splitStations.length > 0 && (
-												<div className="text-sm text-gray-500 mt-1 pl-1">
+												<div className="text-sm text-foreground/60 mt-1 pl-1">
 													Via:{" "}
 													<span className="font-medium text-blue-600">
 														{splitOption.splitStations
@@ -418,7 +418,7 @@ const SplitOptions = ({
 
 									<div className="flex items-center h-full ml-2">
 										<svg
-											className={`w-6 h-6 text-gray-400 transform transition-transform ${
+											className={`w-6 h-6 text-foreground/50 transform transition-transform ${
 												isExpanded ? "rotate-180" : ""
 											}`}
 											xmlns="http://www.w3.org/2000/svg"
@@ -436,9 +436,9 @@ const SplitOptions = ({
 							</div>
 
 							{isExpanded && (
-								<div className="border-t border-gray-200 mt-2">
-									<div className="px-4 py-3 bg-gray-50/50">
-										<h3 className="font-bold text-sm text-gray-700 mb-3">
+								<div className="border-t border-foreground/20 mt-2">
+									<div className="px-4 py-3 bg-background/50">
+										<h3 className="font-bold text-sm text-foreground mb-3">
 											Die Teile deiner Reise
 										</h3>
 										<div className="space-y-2">
@@ -464,10 +464,10 @@ const SplitOptions = ({
 												return (
 													<div
 														key={segmentIndex}
-														className="flex justify-between items-center p-2 rounded-md bg-white border border-gray-200"
+														className="flex justify-between items-center p-2 rounded-md bg-background border border-foreground/20"
 													>
 														<div className="flex-grow">
-															<div className="font-semibold text-sm text-gray-800 flex items-center gap-2">
+															<div className="font-semibold text-sm text-foreground flex items-center gap-2">
 																{getJourneyLegsWithTransfers(segment).map(
 																	(leg, legIndex) => (
 																		<span
@@ -479,13 +479,15 @@ const SplitOptions = ({
 																				getJourneyLegsWithTransfers(segment)
 																					.length -
 																					1 && (
-																				<span className="text-gray-400">→</span>
+																				<span className="text-foreground/50">
+																					→
+																				</span>
 																			)}
 																		</span>
 																	)
 																)}
 															</div>
-															<div className="text-xs text-gray-500 mt-1">
+															<div className="text-xs text-foreground/60 mt-1">
 																{getStationName(segment.legs[0].origin)} (
 																{formatTime(segment.legs[0].departure)}) →{" "}
 																{getStationName(
@@ -542,7 +544,7 @@ const SplitOptions = ({
 																		alert("Failed to generate booking URL.");
 																	}
 																}}
-																className="mt-1 px-3 py-1 bg-green-600 text-white text-xs rounded-md "
+																className="mt-1 px-3 py-1 bg-green-600 text-foreground text-xs rounded-md "
 															>
 																Zur Buchung
 															</button>

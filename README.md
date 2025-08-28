@@ -27,6 +27,16 @@ To run the project locally:
 
 You can also build and run BetterBahn as a Docker container. A `Dockerfile` is included in the repository.
 
+## Docker Compose
+
+You can run the app with docker compose:
+
+### Default/Development
+
+`docker compose -f docker-compose/docker-compose.yaml --project-directory=./ up -d`
+
+http://localhost:3000
+
 ## License
 
 This project is licensed under the AGPL-3.0-only. See the [LICENSE](./LICENSE) file for details.
