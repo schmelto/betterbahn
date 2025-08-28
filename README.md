@@ -26,23 +26,11 @@ You can also build and run BetterBahn as a Docker container. A `Dockerfile` is i
 
 You can run the app with docker compose:
 
-### Default
+### Default/Development
 
 `docker compose -f docker-compose/docker-compose.yaml --project-directory=./ up -d`
 
 http://localhost:3000
-
-### With traefik
-
-Create a .env file in the projects root directory
-
-```env
-DOMAIN=example.com
-SUBDOMAIN=betterbahn
-TRAEFIK_NETWORK=rp
-```
-
-`docker compose -f docker-compose/docker-compose-traefik.yaml --project-directory=./ up -d`
 
 ## License
 

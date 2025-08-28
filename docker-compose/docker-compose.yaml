@@ -1,8 +1,6 @@
 services:
-    betterbahn:
-        image: ghcr.io/l2xu/betterbahn:testing-main
-            context: .
-            dockerfile: Dockerfile
-        restart: unless-stopped
-        ports:
-            - "3000:3000"
+  betterbahn:
+    image: ghcr.io/l2xu/betterbahn:testing-main
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
