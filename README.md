@@ -36,7 +36,7 @@ http://localhost:3000
 
 Create a .env file in the projects root directory
 
-```ini
+```env
 DOMAIN=example.com
 SUBDOMAIN=betterbahn
 TRAEFIK_NETWORK=rp
