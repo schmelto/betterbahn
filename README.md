@@ -15,8 +15,8 @@ This is not an official repository or project of Deutsche Bahn AG. It is an inde
 To run the project locally:
 
 1. Clone the repository
-2. Install dependencies with `npm install`
-3. Start the development server with `npm run dev`
+2. Install dependencies with `pnpm install`
+3. Start the development server with `pnpm run dev`
 
 ## Docker
 
