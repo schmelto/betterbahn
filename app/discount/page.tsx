@@ -2,7 +2,7 @@
 import { JourneyResults } from "@/components/JourneyResults";
 import { SplitOptions } from "@/components/SplitOptions/SplitOptions";
 import { isLegCoveredByDeutschlandTicket } from "@/utils/deutschlandTicketUtils";
-import { searchForJourneys, validateJourneyData } from "@/utils/journeyUtils";
+import { searchForJourneys } from "@/utils/journeyUtils";
 import type { VendoJourney, VendoPrice } from "@/utils/schemas";
 import type { ExtractedData, ProgressInfo, SplitOption } from "@/utils/types";
 import { useSearchParams } from "next/navigation";
@@ -527,8 +527,8 @@ function Discount() {
 					throw new Error(parseData.error || "Failed to parse URL");
 				}
 
-				// Create journey data
 				const { journeyDetails } = parseData;
+
 				const journeyData = {
 					fromStation: journeyDetails.fromStation,
 					toStation: journeyDetails.toStation,
@@ -547,10 +547,6 @@ function Discount() {
 				};
 
 				setExtractedData(journeyData);
-
-				if (!validateJourneyData(journeyData)) {
-					throw new Error("Unvollständige Reisedaten nach der URL-Analyse");
-				}
 
 				// Search for journeys
 				setLoadingMessage(LOADING_MESSAGES.searching);

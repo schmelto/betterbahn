@@ -164,11 +164,3 @@ export const searchForJourneys = async (
 		throw error;
 	}
 };
-
-/**
- * Validates if the extracted data has the minimum required fields
- * @param {Object} extractedData - The journey data to validate
- * @returns {boolean} True if data is valid
- */
-export const validateJourneyData = (extractedData: ExtractedData) =>
-	Boolean(extractedData.fromStationId && extractedData.toStationId);
