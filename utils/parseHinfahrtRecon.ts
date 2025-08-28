@@ -1,17 +1,6 @@
 import zlib from "node:zlib";
 import { z } from "zod/v4";
 
-export const parseHinfahrtReconCrude = (hinfahrtRecon: string) => {
-	const dirtyRegex = /A=1@O=.*?@a=\d+@/g;
-	const matches = hinfahrtRecon.match(dirtyRegex);
-
-	if (matches === null) {
-		throw new Error("Can't process vbid: hinfahrtRecon regex failed");
-	}
-
-	return [matches[0], matches.at(-1)!] as const;
-};
-
 export const parseHinfahrtRecon = (hinfahrtRecon: string) => {
 	/**
 	 * This is an attempt to parse the hinfahrtRecon value in contrast to the straight-forward
@@ -93,4 +82,56 @@ export const parseHinfahrtRecon = (hinfahrtRecon: string) => {
 		arrLid: scValidatedJsonResult.data.req.arrLoc[0].lid,
 		departLid: scValidatedJsonResult.data.req.depLoc[0].lid,
 	};
+};
+
+const reconLegSchema = z.object({
+	halte: z.array(
+		z.object({
+			id: z.string(),
+		})
+	),
+});
+
+const reconResponseSchema = z.object({
+	verbindungen: z.array(
+		z.object({
+			verbindungsAbschnitte: z.array(reconLegSchema),
+		})
+	),
+});
+
+export const parseHinfahrtReconWithAPI = async (
+	ctxRecon: string,
+	anfrageZeitpunkt: string
+) => {
+	const response = await fetch("https://www.bahn.de/web/api/angebote/recon", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			klasse: "KLASSE_2",
+			reisende: [
+				{
+					typ: "ERWACHSENER",
+					ermaessigungen: [
+						{
+							art: "KEINE_ERMAESSIGUNG",
+							klasse: "KLASSENLOS",
+						},
+					],
+					anzahl: 1,
+					alter: [],
+				},
+			],
+			anfrageZeitpunkt,
+			ctxRecon,
+			reservierungsKontingenteVorhanden: false,
+			nurDeutschlandTicketVerbindungen: false,
+			deutschlandTicketVorhanden: false,
+			sitzplatzOnly: false,
+		}),
+	});
+
+	return reconResponseSchema.parse(await response.json());
 };

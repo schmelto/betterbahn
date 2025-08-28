@@ -1,8 +1,5 @@
-// Importiere Puppeteer für Web-Scraping
-import { parseHinfahrtReconCrude } from "@/utils/parseHinfahrtRecon";
+import { parseHinfahrtReconWithAPI } from "@/utils/parseHinfahrtRecon";
 import type { ExtractedData } from "@/utils/types";
-import { execSync } from 'child_process';
-import puppeteer, { type LaunchOptions } from "puppeteer";
 import { z } from "zod/v4";
 
 // POST-Route für URL-Parsing
@@ -22,17 +19,28 @@ export async function POST(request: Request) {
 
 		let finalUrl;
 		try {
-			// Verwende headless Browser um JavaScript-Redirects zu handhaben
 			finalUrl = await getResolvedUrlBrowserless(url);
 		} catch {
 			console.log(
-				"Browser navigation failed, trying to parse original URL directly"
+				"Resolving URL failed, trying to parse original URL directly"
 			);
 			finalUrl = url;
 		}
 
 		// Reisedetails aus der aufgelösten URL extrahieren
 		const journeyDetails = extractJourneyDetails(finalUrl);
+
+		if ("error" in journeyDetails) {
+			return Response.json({
+				error: journeyDetails.error,
+			});
+		}
+
+		if (!journeyDetails.fromStationId || !journeyDetails.toStationId) {
+			return Response.json({
+				error: "journeyDetails is missing fromStationId or toStationId",
+			});
+		}
 
 		// Vereinfachte Reiseinformationen anzeigen
 		displayJourneyInfo(journeyDetails);
@@ -42,8 +50,9 @@ export async function POST(request: Request) {
 			journeyDetails: journeyDetails,
 		});
 	} catch (error) {
-		const typedError = error as { message: string }
+		const typedError = error as { message: string };
 		console.error("Error parsing URL:", error);
+
 		return Response.json(
 			{ error: "Failed to parse URL", details: typedError.message },
 			{ status: 500 }
@@ -68,13 +77,13 @@ function extractJourneyDetails(url: string) {
 		};
 
 		// Helper functions for extraction
-		const extractStationId = (paramValue: string|null) => {
+		const extractStationId = (paramValue: string | null) => {
 			if (!paramValue) return null;
 			const match = paramValue.match(/@L=(\d+)/);
 			return match ? match[1] : null;
 		};
 
-		const extractStationName = (paramValue: string|null) => {
+		const extractStationName = (paramValue: string | null) => {
 			if (!paramValue) return null;
 			const oMatch = paramValue.match(/@O=([^@]+)/);
 			if (oMatch) {
@@ -168,7 +177,7 @@ function extractJourneyDetails(url: string) {
 
 		return details;
 	} catch (error) {
-		const typedError = error as { message: string }
+		const typedError = error as { message: string };
 		console.error("❌ Error extracting journey details:", error);
 		return {
 			error: "Failed to extract journey details",
@@ -202,105 +211,45 @@ function displayJourneyInfo(journeyDetails: ExtractedData) {
 	);
 }
 
-function getSystemChromium() {
-  try {
-    return execSync("which chromium").toString().trim();
-  } catch {
-    throw new Error("System Chromium not found in PATH");
-  }
-}
-
-async function _getResolvedUrl(url: string) {
-	let browser;
-	try {
-		const launchOptions: LaunchOptions = {
-			headless: true,
-			args: [
-				"--no-sandbox",
-				"--disable-setuid-sandbox",
-				"--disable-dev-shm-usage",
-				"--disable-gpu",
-			],
-		};
-
-		// Only set executablePath in production/deployment
-		if (process.env.USE_SYSTEM_CHROMIUM === "true") {
-            launchOptions.executablePath = getSystemChromium();
-        } else if (
-			process.env.NODE_ENV === "production" ||
-			process.env.USE_CHROMIUM_PATH === "true"
-		) {
-			launchOptions.executablePath = "/usr/bin/chromium";
-		}
-
-		browser = await puppeteer.launch(launchOptions);
-		const page = await browser.newPage();
-		await page.setViewport({ width: 1366, height: 768 });
-
-		// Listen for journey URLs during navigation
-		let finalUrl = url;
-
-		// Listen for all navigation events
-		page.on("framenavigated", (frame) => {
-			const frameUrl = frame.url();
-			if (frameUrl.includes("fahrplan") && frameUrl.includes("#")) {
-				finalUrl = frameUrl;
-			}
-		});
-
-		page.on("response", (response) => {
-			const responseUrl = response.url();
-			if (responseUrl.includes("fahrplan/suche") && responseUrl.includes("#")) {
-				finalUrl = responseUrl;
-			}
-		});
-
-		// Navigate to the URL with more lenient settings
-		await page.goto(url, {
-			waitUntil: "domcontentloaded",
-			timeout: 30000,
-		});
-
-		// Wait for potential redirects and JavaScript execution
-		await new Promise((resolve) => setTimeout(resolve, 3000));
-
-		// Check current URL
-		const currentUrl = page.url();
-		if (currentUrl !== url && currentUrl.includes("fahrplan")) {
-			finalUrl = currentUrl;
-		}
-
-		console.log("Original URL:", url);
-		console.log("Final URL:", finalUrl);
-
-		return finalUrl;
-	} catch (error) {
-		const typedError = error as { message: string }
-		console.error("Browser error:", typedError.message);
-		// Instead of returning original URL, throw the error so we can handle it properly
-		throw new Error(`Browser navigation failed: ${typedError.message}`);
-	} finally {
-		if (browser) {
-			await browser.close();
-		}
-	}
-}
-
 async function getResolvedUrlBrowserless(url: string) {
-	const response = await fetch(`https://www.bahn.de/web/api/angebote/verbindung/${new URL(url).searchParams.get("vbid")}`)
+	const response = await fetch(
+		`https://www.bahn.de/web/api/angebote/verbindung/${new URL(
+			url
+		).searchParams.get("vbid")}`
+	);
 
-	const json = await response.json()
+	const json = await response.json();
 
-	const parsed = z.object({
-		hinfahrtRecon: z.string()
-	}).parse(json)
+	const parsed = z
+		.object({
+			hinfahrtRecon: z.string(),
+			hinfahrtDatum: z.string(),
+		})
+		.parse(json);
 
-	const data = parseHinfahrtReconCrude(parsed.hinfahrtRecon)
+	const data = await parseHinfahrtReconWithAPI(
+		parsed.hinfahrtRecon,
+		parsed.hinfahrtDatum
+	);
 
-	const newUrl = new URL("https://www.bahn.de/buchung/fahrplan/suche")
+	const newUrl = new URL("https://www.bahn.de/buchung/fahrplan/suche");
 
-	newUrl.searchParams.set("soid", data[0])
-	newUrl.searchParams.set("zoid", data[1])
+	const soid = data.verbindungen
+		.at(0)
+		?.verbindungsAbschnitte.at(0)
+		?.halte.at(0)?.id;
 
-	return newUrl.toString()
+	const zoid = data.verbindungen
+		.at(0)
+		?.verbindungsAbschnitte.at(-1)
+		?.halte.at(-1)?.id;
+
+	if (soid === undefined || zoid === undefined) {
+		throw new Error("Could not find soid or zoid in recon response");
+	}
+
+	newUrl.searchParams.set("soid", soid);
+	newUrl.searchParams.set("zoid", zoid);
+
+	return newUrl.toString();
 }
