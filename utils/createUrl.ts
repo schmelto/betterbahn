@@ -1,59 +1,15 @@
-/**
- * Erstellt eine Such-URL für die offizielle DB-Website
- * @param {Object} params - Suchparameter
- * @param {string} params.from - Name der Startstation
- * @param {string} params.to - Name der Zielstation
- * @param {string} params.date - Abfahrtsdatum im ISO-Format
- * @param {number} params.class - Reiseklasse (1 oder 2)
- * @param {Object} params.fromStation - Startstation-Objekt mit ID und Koordinaten
- * @param {Object} params.toStation - Zielstation-Objekt mit ID und Koordinaten
- * @returns {string} DB-Website Such-URL
- */
-export function createDBSearchUrl({
-	from,
-	to,
-	date,
-	class: travelClass = 2,
-	fromStation = null,
-	toStation = null,
-}) {
-	// Datum formatieren für DB-URL
-	const formattedDate = formatDate(date);
-	const parts = [
-		"sts=true",
-		`so=${encodeURIComponent(from)}`,
-		`zo=${encodeURIComponent(to)}`,
-		`kl=${travelClass}`,
-		"r=13:16:KLASSENLOS:1",
-	];
+import type { VendoJourney } from "./schemas";
 
-	// Hilfsfunktion zum Hinzufügen von Stationsdaten
-	const addStation = (prefix, station) => {
-		if (!station?.id) return;
-		parts.push(`${prefix}oid=${createStationId(station)}`);
-		parts.push(`${prefix}ei=${station.id}`);
-	};
-
-	// Start- und Zielstation hinzufügen
-	addStation("so", fromStation);
-	addStation("zo", toStation);
-	parts.push("sot=ST", "zot=ST");
-
-	// Weitere Parameter für die DB-Suche hinzufügen
-	parts.push(
-		`hd=${formattedDate}`,
-		"hza=D",
-		"hz=%5B%5D",
-		"ar=false",
-		"s=false",
-		"d=false",
-		"vm=00,01,02,03,04,05,06,07,08,09",
-		"fm=false",
-		"bp=false",
-		"dlt=false",
-		"dltv=false"
-	);
-	return `https://www.bahn.de/buchung/fahrplan/suche#${parts.join("&")}`;
+interface Station {
+	id?: string;
+	stationId?: string;
+	uicCode?: string;
+	evaId?: string;
+	name: string;
+	longitude?: number;
+	latitude?: number;
+	x?: number;
+	y?: number;
 }
 
 /**
@@ -61,7 +17,7 @@ export function createDBSearchUrl({
  * @param {string} date - ISO date string
  * @returns {string} Formatted date string
  */
-function formatDate(date) {
+function formatDate(date: string): string {
 	if (typeof date !== "string") return date;
 	let formatted = date
 		.replace(/\+\d{2}:\d{2}$/, "")
@@ -77,7 +33,7 @@ function formatDate(date) {
  * @param {Object} station - Station object with name, id, and coordinates
  * @returns {string} Encoded station ID
  */
-function createStationId(station) {
+function createStationId(station: Station): string {
 	const stationString = Object.entries({
 		A: "1",
 		O: station.name,
@@ -100,13 +56,26 @@ function createStationId(station) {
  * @param {number} travelClass - Travel class (1 or 2)
  * @returns {string} DB website search URL
  */
-export function createSegmentSearchUrl(segment, travelClass = 2) {
+export function createSegmentSearchUrl(
+	segment: VendoJourney,
+	travelClass: number = 2
+): string {
 	if (!segment?.legs?.length)
 		throw new Error("Invalid segment: missing legs data");
 	const legs = segment.legs;
 	const firstLeg = legs[0];
 	const lastLeg = legs[legs.length - 1];
 	const cleanDate = formatDate(firstLeg.departure);
+
+	// TODO diesen code zu new URL -> .searchParams.set() usw porten
+
+	/**
+	 * TODO looking at the original code, the majority treats origin and destination
+	 * as optional / possibly undefined properties.
+	 * the following logic, from the original code, doesn't treat them as such, which could be an oversight.
+	 * i did not find any checking logic further up the component/call stack that ensures their presence.
+	 */
+
 	const parts = [
 		"sts=true",
 		`so=${encodeURIComponent(firstLeg.origin.name)}`,
@@ -114,11 +83,20 @@ export function createSegmentSearchUrl(segment, travelClass = 2) {
 		`kl=${travelClass}`,
 		"r=13:16:KLASSENLOS:1",
 	];
+
 	const originId = addStationId(firstLeg.origin, "s", parts);
 	const destId = addStationId(lastLeg.destination, "z", parts);
+
 	parts.push("sot=ST", "zot=ST");
-	if (originId && firstLeg.origin.name) parts.push(`soei=${originId}`);
-	if (destId && lastLeg.destination.name) parts.push(`zoei=${destId}`);
+
+	if (originId && firstLeg.origin.name) {
+		parts.push(`soei=${originId}`);
+	}
+
+	if (destId && lastLeg.destination.name) {
+		parts.push(`zoei=${destId}`);
+	}
+
 	parts.push(
 		`hd=${cleanDate}`,
 		"hza=D",
@@ -132,6 +110,7 @@ export function createSegmentSearchUrl(segment, travelClass = 2) {
 		"dlt=false",
 		"dltv=false"
 	);
+
 	return `https://www.bahn.de/buchung/fahrplan/suche#${parts.join("&")}`;
 }
 
@@ -145,7 +124,7 @@ export function createSegmentSearchUrl(segment, travelClass = 2) {
 /**
  * Known problematic station mappings - station IDs that don't match expected names
  */
-const PROBLEMATIC_STATION_IDS = {
+const PROBLEMATIC_STATION_IDS: Record<string, string> = {
 	// Add known problematic mappings here
 	8002235: "Senden", // This ID seems to resolve to Senden instead of Gengenbach
 };
@@ -156,7 +135,7 @@ const PROBLEMATIC_STATION_IDS = {
  * @param {string} stationName - The station name
  * @returns {boolean} - Whether the station ID is safe to use
  */
-function shouldUseStationId(stationId, stationName) {
+function shouldUseStationId(stationId: string, stationName: string) {
 	if (!stationId || !stationName) return false;
 	const problematicName = PROBLEMATIC_STATION_IDS[stationId];
 	if (
@@ -171,7 +150,7 @@ function shouldUseStationId(stationId, stationName) {
 	return true;
 }
 
-function addStationId(station, type, parts) {
+function addStationId(station: Station, type: string, parts: string[]) {
 	const stationId =
 		station.id || station.stationId || station.uicCode || station.evaId;
 

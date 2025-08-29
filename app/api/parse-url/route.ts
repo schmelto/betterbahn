@@ -1,59 +1,65 @@
-// Importiere Puppeteer für Web-Scraping
-import puppeteer from "puppeteer";
-import { execSync } from 'child_process';
+import { parseHinfahrtReconWithAPI } from "@/utils/parseHinfahrtRecon";
+import type { ExtractedData } from "@/utils/types";
+import { z } from "zod/v4";
+import { apiErrorHandler } from "../_lib/error-handler";
 
 // POST-Route für URL-Parsing
-export async function POST(request) {
-	try {
-		// Request-Body extrahieren
-		const body = await request.json();
-		const { url } = body;
+const handler = async (request: Request) => {
+	// Request-Body extrahieren
+	const body = await request.json();
+	const { url } = body;
 
-		// Überprüfe ob URL vorhanden ist
-		if (!url) {
-			return Response.json(
-				{ error: "Missing required parameter: url" },
-				{ status: 400 }
-			);
-		}
-
-		let finalUrl;
-		try {
-			// Verwende headless Browser um JavaScript-Redirects zu handhaben
-			finalUrl = await getResolvedUrl(url);
-		} catch (browserError) {
-			console.log(
-				"Browser navigation failed, trying to parse original URL directly"
-			);
-			finalUrl = url;
-		}
-
-		// Reisedetails aus der aufgelösten URL extrahieren
-		const journeyDetails = extractJourneyDetails(finalUrl);
-
-		// Vereinfachte Reiseinformationen anzeigen
-		displayJourneyInfo(journeyDetails);
-
-		return Response.json({
-			success: true,
-			journeyDetails: journeyDetails,
-		});
-	} catch (error) {
-		console.error("Error parsing URL:", error);
+	// Überprüfe ob URL vorhanden ist
+	if (!url) {
 		return Response.json(
-			{ error: "Failed to parse URL", details: error.message },
-			{ status: 500 }
+			{ error: "Missing required parameter: url" },
+			{ status: 400 }
 		);
 	}
+
+	let finalUrl;
+	try {
+		finalUrl = await getResolvedUrlBrowserless(url);
+	} catch {
+		console.log("Resolving URL failed, trying to parse original URL directly");
+		finalUrl = url;
+	}
+
+	// Reisedetails aus der aufgelösten URL extrahieren
+	const journeyDetails = extractJourneyDetails(finalUrl);
+
+	if ("error" in journeyDetails) {
+		return Response.json({
+			error: journeyDetails.error,
+		});
+	}
+
+	if (!journeyDetails.fromStationId || !journeyDetails.toStationId) {
+		return Response.json({
+			error: "journeyDetails is missing fromStationId or toStationId",
+		});
+	}
+
+	// Vereinfachte Reiseinformationen anzeigen
+	displayJourneyInfo(journeyDetails);
+
+	return Response.json({
+		success: true,
+		journeyDetails: journeyDetails,
+	});
+};
+
+export async function POST(request: Request) {
+	return apiErrorHandler(() => handler(request));
 }
 
-function extractJourneyDetails(url) {
+function extractJourneyDetails(url: string) {
 	try {
 		const urlObj = new URL(url);
 		const hash = urlObj.hash;
 		const searchParams = urlObj.searchParams;
 
-		const details = {
+		const details: ExtractedData = {
 			fromStation: null,
 			fromStationId: null,
 			toStation: null,
@@ -64,13 +70,13 @@ function extractJourneyDetails(url) {
 		};
 
 		// Helper functions for extraction
-		const extractStationId = (paramValue) => {
+		const extractStationId = (paramValue: string | null) => {
 			if (!paramValue) return null;
 			const match = paramValue.match(/@L=(\d+)/);
 			return match ? match[1] : null;
 		};
 
-		const extractStationName = (paramValue) => {
+		const extractStationName = (paramValue: string | null) => {
 			if (!paramValue) return null;
 			const oMatch = paramValue.match(/@O=([^@]+)/);
 			if (oMatch) {
@@ -149,7 +155,7 @@ function extractJourneyDetails(url) {
 		if (searchParams.has("hd")) details.date = searchParams.get("hd");
 		if (searchParams.has("ht")) details.time = searchParams.get("ht");
 		if (searchParams.has("kl"))
-			details.class = parseInt(searchParams.get("kl"));
+			details.class = parseInt(searchParams.get("kl")!);
 		if (searchParams.has("so") && !details.fromStation)
 			details.fromStation = searchParams.get("so");
 		if (searchParams.has("zo") && !details.toStation)
@@ -164,16 +170,17 @@ function extractJourneyDetails(url) {
 
 		return details;
 	} catch (error) {
+		const typedError = error as { message: string };
 		console.error("❌ Error extracting journey details:", error);
 		return {
 			error: "Failed to extract journey details",
-			details: error.message,
+			details: typedError.message,
 		};
 	}
 }
 
 // Helper function to display simplified journey information
-function displayJourneyInfo(journeyDetails) {
+function displayJourneyInfo(journeyDetails: ExtractedData) {
 	if (!journeyDetails || journeyDetails.error) {
 		console.log("❌ Failed to extract journey information");
 		return;
@@ -197,85 +204,45 @@ function displayJourneyInfo(journeyDetails) {
 	);
 }
 
-function getSystemChromium() {
-  try {
-    return execSync("which chromium").toString().trim();
-  } catch {
-    throw new Error("System Chromium not found in PATH");
-  }
-}
+async function getResolvedUrlBrowserless(url: string) {
+	const response = await fetch(
+		`https://www.bahn.de/web/api/angebote/verbindung/${new URL(
+			url
+		).searchParams.get("vbid")}`
+	);
 
-async function getResolvedUrl(url) {
-	let browser;
-	try {
-		const launchOptions = {
-			headless: true,
-			args: [
-				"--no-sandbox",
-				"--disable-setuid-sandbox",
-				"--disable-dev-shm-usage",
-				"--disable-gpu",
-			],
-		};
+	const json = await response.json();
 
-		// Only set executablePath in production/deployment
-		if (process.env.USE_SYSTEM_CHROMIUM === "true") {
-            launchOptions.executablePath = getSystemChromium();
-        } else if (
-			process.env.NODE_ENV === "production" ||
-			process.env.USE_CHROMIUM_PATH === "true"
-		) {
-			launchOptions.executablePath = "/usr/bin/chromium";
-		}
+	const parsed = z
+		.object({
+			hinfahrtRecon: z.string(),
+			hinfahrtDatum: z.string(),
+		})
+		.parse(json);
 
-		browser = await puppeteer.launch(launchOptions);
-		const page = await browser.newPage();
-		await page.setViewport({ width: 1366, height: 768 });
+	const data = await parseHinfahrtReconWithAPI(
+		parsed.hinfahrtRecon,
+		parsed.hinfahrtDatum
+	);
 
-		// Listen for journey URLs during navigation
-		let finalUrl = url;
+	const newUrl = new URL("https://www.bahn.de/buchung/fahrplan/suche");
 
-		// Listen for all navigation events
-		page.on("framenavigated", (frame) => {
-			const frameUrl = frame.url();
-			if (frameUrl.includes("fahrplan") && frameUrl.includes("#")) {
-				finalUrl = frameUrl;
-			}
-		});
+	const soid = data.verbindungen
+		.at(0)
+		?.verbindungsAbschnitte.at(0)
+		?.halte.at(0)?.id;
 
-		page.on("response", (response) => {
-			const responseUrl = response.url();
-			if (responseUrl.includes("fahrplan/suche") && responseUrl.includes("#")) {
-				finalUrl = responseUrl;
-			}
-		});
+	const zoid = data.verbindungen
+		.at(0)
+		?.verbindungsAbschnitte.at(-1)
+		?.halte.at(-1)?.id;
 
-		// Navigate to the URL with more lenient settings
-		await page.goto(url, {
-			waitUntil: "domcontentloaded",
-			timeout: 30000,
-		});
-
-		// Wait for potential redirects and JavaScript execution
-		await new Promise((resolve) => setTimeout(resolve, 3000));
-
-		// Check current URL
-		const currentUrl = page.url();
-		if (currentUrl !== url && currentUrl.includes("fahrplan")) {
-			finalUrl = currentUrl;
-		}
-
-		console.log("Original URL:", url);
-		console.log("Final URL:", finalUrl);
-
-		return finalUrl;
-	} catch (error) {
-		console.error("Browser error:", error.message);
-		// Instead of returning original URL, throw the error so we can handle it properly
-		throw new Error(`Browser navigation failed: ${error.message}`);
-	} finally {
-		if (browser) {
-			await browser.close();
-		}
+	if (soid === undefined || zoid === undefined) {
+		throw new Error("Could not find soid or zoid in recon response");
 	}
+
+	newUrl.searchParams.set("soid", soid);
+	newUrl.searchParams.set("zoid", zoid);
+
+	return newUrl.toString();
 }

@@ -1,97 +1,104 @@
-// Importiere DB Vendo Client und notwendige Utilities
+import { vendoJourneySchema, type VendoJourney } from "@/utils/schemas";
+import type { ProgressInfo, SplitPoint, TrainLine } from "@/utils/types.js";
 import { createClient } from "db-vendo-client";
-import { profile as dbProfile } from "db-vendo-client/p/db/index.js";
-import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards.js";
-import { incrementApiCount, getApiCount } from "../../../utils/apiCounter.js";
+import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
+import { profile as dbProfile } from "db-vendo-client/p/db/index";
+import { z } from "zod/v4";
+import { getApiCount, incrementApiCount } from "../../../utils/apiCounter";
+import { apiErrorHandler } from "../_lib/error-handler";
 
-// Konfiguriere DB-Client
 const client = createClient(dbProfile, "mail@lukasweihrauch.de");
 
-// ---- Konfiguration ----
 const MIN_SINGLE_SAVINGS_FACTOR = 1; // Preis muss < original * 0.98 sein
 const TIME_TOLERANCE_MS = 60_000; // 1 Minute Toleranz
 const DEFAULT_BATCH_SIZE = 1; // Konservativ für Rate-Limits
 const VERBOSE = true; // Ausführliche Logs ein/ausschalten
 
 // POST-Route für Split-Journey Analyse
-export async function POST(request) {
-	try {
-		// Übergebene Daten aus der Anfrage extrahieren
-		const {
-			originalJourney,
-			bahnCard,
-			hasDeutschlandTicket,
-			passengerAge,
-			travelClass,
-			useStreaming,
-		} = await request.json();
+const handler = async (request: Request) => {
+	// Übergebene Daten aus der Anfrage extrahieren
+	const {
+		originalJourney,
+		bahnCard,
+		hasDeutschlandTicket,
+		passengerAge,
+		travelClass,
+		useStreaming,
+	} = await request.json();
 
-		// Validiere dass originalJourney vorhanden ist
-		if (!originalJourney?.legs) {
-			return Response.json(
-				{ error: "Missing originalJourney" },
-				{ status: 400 }
-			);
-		}
+	// Validiere dass originalJourney vorhanden ist
+	if (!originalJourney?.legs) {
+		return Response.json({ error: "Missing originalJourney" }, { status: 400 });
+	}
 
-		// Split-Kandidaten aus vorhandenen Legs ableiten (keine zusätzlichen API Calls)
-		const splitPoints = extractSplitPoints(originalJourney);
+	// Split-Kandidaten aus vorhandenen Legs ableiten (keine zusätzlichen API Calls)
+	const splitPoints = extractSplitPoints(originalJourney);
 
-		if (splitPoints.length === 0) {
-			return Response.json({
-				success: true,
-				splitOptions: [],
-				message: "No split points found",
-			});
-		}
-
-		// Behandle Streaming-Response falls gewünscht
-		if (useStreaming) {
-			return handleStreamingResponse(
-				originalJourney,
-				splitPoints,
-				bahnCard,
-				hasDeutschlandTicket,
-				passengerAge,
-				travelClass
-			);
-		}
-
-		// Baue die Abfrageoptionen basierend auf den übergebenen Parametern wie bahnCard, db-ticket usw.
-		const queryOptions = buildQueryOptions({
-			bahnCard,
-			hasDeutschlandTicket,
-			passengerAge,
-			travelClass,
-		});
-
-		// Speichert den Originalpreis der Reise, um ihn später für die Einsparungsberechnung zu verwenden
-		const originalPrice = originalJourney.price?.amount || 0;
-
-		const splitOptions = await analyzeSplitPoints(
-			originalJourney,
-			splitPoints,
-			queryOptions,
-			originalPrice
-		);
-
-		console.log(
-			`\n✅ SPLIT ANALYSIS COMPLETED - Total API calls: ${getApiCount()}\n`
-		);
-
-		// Gibt die Ergebnisse als JSON zurück
+	if (splitPoints.length === 0) {
 		return Response.json({
 			success: true,
-			splitOptions: splitOptions.sort((a, b) => b.savings - a.savings),
-			originalPrice,
+			splitOptions: [],
+			message: "No split points found",
 		});
-	} catch (error) {
-		console.error("Split analysis error:", error);
-		return Response.json(
-			{ error: "Failed to analyze split journeys" },
-			{ status: 500 }
+	}
+
+	// Behandle Streaming-Response falls gewünscht
+	if (useStreaming) {
+		return handleStreamingResponse(
+			originalJourney,
+			splitPoints,
+			bahnCard,
+			hasDeutschlandTicket,
+			passengerAge,
+			travelClass
 		);
 	}
+
+	// Baue die Abfrageoptionen basierend auf den übergebenen Parametern wie bahnCard, db-ticket usw.
+	const queryOptions = buildQueryOptions({
+		bahnCard,
+		hasDeutschlandTicket,
+		passengerAge,
+		travelClass,
+	});
+
+	// Speichert den Originalpreis der Reise, um ihn später für die Einsparungsberechnung zu verwenden
+	const originalPrice = originalJourney.price?.amount || 0;
+
+	const splitOptions = await analyzeSplitPoints(
+		originalJourney,
+		splitPoints,
+		queryOptions,
+		originalPrice
+	);
+
+	console.log(
+		`\n✅ SPLIT ANALYSIS COMPLETED - Total API calls: ${getApiCount()}\n`
+	);
+
+	// Gibt die Ergebnisse als JSON zurück
+	return Response.json({
+		success: true,
+		splitOptions: splitOptions.sort((a, b) => b.savings - a.savings),
+		originalPrice,
+	});
+};
+
+export async function POST(request: Request) {
+	return apiErrorHandler(() => handler(request));
+}
+
+interface QueryOptions {
+	deutschlandTicketDiscount?: boolean;
+	results: number;
+	stopovers: boolean;
+	firstClass: boolean;
+	loyaltyCard?: {
+		type: string;
+		discount: number;
+		class: number;
+	};
+	age?: number;
 }
 
 // Helper Functions
@@ -100,13 +107,20 @@ function buildQueryOptions({
 	hasDeutschlandTicket,
 	passengerAge,
 	travelClass,
+}: {
+	bahnCard: string;
+	hasDeutschlandTicket: boolean;
+	passengerAge: unknown;
+	travelClass?: string;
 }) {
-	const options = {
+	const options: QueryOptions = {
 		results: 1,
 		stopovers: true,
 		firstClass: parseInt(travelClass || "2", 10) === 1,
 	};
+
 	const discount = parseInt(bahnCard, 10);
+
 	if (bahnCard && bahnCard !== "none" && [25, 50, 100].includes(discount)) {
 		options.loyaltyCard = {
 			type: loyaltyCards.BAHNCARD,
@@ -114,22 +128,35 @@ function buildQueryOptions({
 			class: parseInt(travelClass || "2", 10),
 		};
 	}
-	if (typeof passengerAge === "number") options.age = passengerAge;
-	if (hasDeutschlandTicket) options.deutschlandTicketDiscount = true;
+
+	if (typeof passengerAge === "number") {
+		options.age = passengerAge;
+	}
+
+	if (hasDeutschlandTicket) {
+		options.deutschlandTicketDiscount = true;
+	}
+
 	return options;
 }
 
-function extractSplitPoints(journey) {
+function extractSplitPoints(journey: VendoJourney) {
 	const map = new Map();
+
 	journey.legs.forEach((leg, legIndex) => {
-		if (leg.walking || !leg.stopovers) return;
+		if (leg.walking || !leg.stopovers) {
+			return;
+		}
+
 		leg.stopovers.forEach((s, stopIndex) => {
 			if (
 				(legIndex === 0 && stopIndex === 0) ||
 				(legIndex === journey.legs.length - 1 &&
-					stopIndex === leg.stopovers.length - 1)
-			)
+					stopIndex === leg.stopovers!.length - 1)
+			) {
 				return;
+			}
+
 			if (s.arrival && s.departure && s.stop && !map.has(s.stop.id)) {
 				map.set(s.stop.id, {
 					station: { id: s.stop.id, name: s.stop.name },
@@ -143,18 +170,25 @@ function extractSplitPoints(journey) {
 			}
 		});
 	});
+
 	const uniqueStops = Array.from(map.values());
-	if (VERBOSE)
+
+	if (VERBOSE) {
 		console.log(`Extracted ${uniqueStops.length} unique split candidates.`);
+	}
+
 	return uniqueStops;
 }
 
 async function analyzeSplitPoints(
-	originalJourney,
-	splitPoints,
-	queryOptions,
-	originalPrice,
-	{ onProgress, batchSize = DEFAULT_BATCH_SIZE } = {}
+	originalJourney: VendoJourney,
+	splitPoints: SplitPoint[],
+	queryOptions: QueryOptions,
+	originalPrice: number,
+	{
+		onProgress,
+		batchSize = DEFAULT_BATCH_SIZE,
+	}: { onProgress?: unknown; batchSize?: number } = {}
 ) {
 	const splitOptions = [];
 	const streaming = typeof onProgress === "function";
@@ -163,7 +197,7 @@ async function analyzeSplitPoints(
 			`\n🔍 Analyse von ${splitPoints.length} Split-Stationen gestartet (streaming=${streaming})`
 		);
 
-	const processBatch = async (points) => {
+	const processBatch = async (points: SplitPoint[]) => {
 		const results = await Promise.allSettled(
 			points.map((sp) =>
 				analyzeSingleSplit(originalJourney, sp, queryOptions, originalPrice)
@@ -179,10 +213,10 @@ async function analyzeSplitPoints(
 				splitOptions.push(res.value);
 				if (VERBOSE)
 					console.log(
-						`✅ ${sp.station.name}: €${res.value.totalPrice} (saves €${res.value.savings})`
+						`✅ ${sp.station?.name}: €${res.value.totalPrice} (saves €${res.value.savings})`
 					);
 			} else if (res.status === "rejected" && VERBOSE) {
-				console.log(`❌ ${sp.station.name}:`, res.reason?.message || "error");
+				console.log(`❌ ${sp.station?.name}:`, res.reason?.message || "error");
 			}
 		});
 	};
@@ -193,8 +227,8 @@ async function analyzeSplitPoints(
 			onProgress({
 				checked: i,
 				total: splitPoints.length,
-				message: `Prüfe ${sp.station.name}...`,
-				currentStation: sp.station.name,
+				message: `Prüfe ${sp.station?.name}...`,
+				currentStation: sp.station?.name,
 			});
 			try {
 				const option = await analyzeSingleSplit(
@@ -218,7 +252,7 @@ async function analyzeSplitPoints(
 					i + 1 === splitPoints.length
 						? "Analyse abgeschlossen"
 						: `${i + 1}/${splitPoints.length} Stationen geprüft`,
-				currentStation: sp.station.name,
+				currentStation: sp.station?.name,
 			});
 			if (i < splitPoints.length - 1)
 				await new Promise((r) => setTimeout(r, 100));
@@ -235,10 +269,10 @@ async function analyzeSplitPoints(
 
 // Split Analysis Functions
 async function analyzeSingleSplit(
-	originalJourney,
-	splitPoint,
-	queryOptions,
-	originalPrice
+	originalJourney: VendoJourney,
+	splitPoint: SplitPoint,
+	queryOptions: QueryOptions,
+	originalPrice: number
 ) {
 	const origin = originalJourney.legs[0].origin;
 	const destination =
@@ -250,35 +284,57 @@ async function analyzeSingleSplit(
 		// Increment API counters for both segments
 		incrementApiCount(
 			"SPLIT_SEARCH_SEGMENT_1",
-			`${origin.name} → ${splitPoint.station.name}`
+			`${origin?.name} → ${splitPoint.station?.name}`
 		);
 		incrementApiCount(
 			"SPLIT_SEARCH_SEGMENT_2",
-			`${splitPoint.station.name} → ${destination.name}`
+			`${splitPoint.station?.name} → ${destination?.name}`
 		);
 
 		// Make both API calls in parallel using Promise.all
-		const [firstSegment, secondSegment] = await Promise.all([
-			client.journeys(origin.id, splitPoint.station.id, {
+		const [firstSegmentUntyped, secondSegmentUntyped] = await Promise.all([
+			/** TODO origin and destination can be undefined, there's probably a check (type-gate) with error handling missing here */
+			client.journeys(origin?.id, splitPoint.station.id, {
 				...queryOptions,
 				departure: originalDeparture,
 			}),
-			client.journeys(splitPoint.station.id, destination.id, {
+
+			client.journeys(splitPoint.station.id, destination?.id, {
 				...queryOptions,
 				departure: splitDeparture,
 			}),
 		]);
 
+		const clientJourneySchema = z.object({
+			journeys: z.array(vendoJourneySchema),
+		});
+		const firstSegment = clientJourneySchema.parse(firstSegmentUntyped);
+		const secondSegment = clientJourneySchema.parse(secondSegmentUntyped);
+
+		if (
+			firstSegment.journeys === undefined ||
+			secondSegment.journeys === undefined
+		) {
+			return null;
+		}
+
 		const firstJourney = findMatchingJourney(
 			firstSegment.journeys,
 			originalDeparture
 		);
-		if (!firstJourney) return null;
+
+		if (!firstJourney) {
+			return null;
+		}
+
 		const secondJourney = findMatchingJourney(
 			secondSegment.journeys,
 			splitDeparture
 		);
-		if (!secondJourney) return null;
+
+		if (!secondJourney) {
+			return null;
+		}
 
 		// Calculate pricing
 		const firstPrice = firstJourney.price?.amount || 0;
@@ -298,23 +354,25 @@ async function analyzeSingleSplit(
 
 		return null;
 	} catch (error) {
+		const typedError = error as { message: string };
 		console.log(
 			`Single split analysis error at ${splitPoint.station.name}:`,
-			error.message
+			typedError.message
 		);
 		throw error; // Re-throw to be handled by Promise.allSettled
 	}
 }
 
 function createSplitResult(
-	type,
-	splitStations,
-	segments,
-	totalPrice,
-	originalPrice,
-	trainLine
+	type: string,
+	splitStations: unknown,
+	segments: VendoJourney[],
+	totalPrice: number,
+	originalPrice: number,
+	trainLine?: TrainLine
 ) {
 	const savings = originalPrice - totalPrice;
+
 	return {
 		type: `same-train-${type}-split`,
 		splitStations,
@@ -330,7 +388,10 @@ function createSplitResult(
 	};
 }
 
-function findMatchingJourney(journeys, targetDeparture) {
+function findMatchingJourney(
+	journeys: readonly VendoJourney[],
+	targetDeparture: Date
+) {
 	if (!journeys?.length) return null;
 	const expected = targetDeparture.getTime();
 	return (
@@ -344,12 +405,12 @@ function findMatchingJourney(journeys, targetDeparture) {
 
 // Streaming handler for real-time progress updates
 async function handleStreamingResponse(
-	originalJourney,
-	splitPoints,
-	bahnCard,
-	hasDeutschlandTicket,
-	passengerAge,
-	travelClass
+	originalJourney: VendoJourney,
+	splitPoints: SplitPoint[],
+	bahnCard: string,
+	hasDeutschlandTicket: boolean,
+	passengerAge: string,
+	travelClass: string
 ) {
 	const encoder = new TextEncoder();
 
@@ -384,7 +445,7 @@ async function handleStreamingResponse(
 					queryOptions,
 					originalPrice,
 					{
-						onProgress: (progress) => {
+						onProgress: (progress: ProgressInfo) => {
 							controller.enqueue(
 								encoder.encode(
 									`data: ${JSON.stringify({
@@ -412,9 +473,11 @@ async function handleStreamingResponse(
 					encoder.encode(`data: ${JSON.stringify(finalData)}\n\n`)
 				);
 			} catch (error) {
+				const typedError = error as { message?: string };
+
 				const errorData = {
 					type: "error",
-					error: error.message || "Failed to analyze split journeys",
+					error: typedError.message || "Failed to analyze split journeys",
 				};
 				controller.enqueue(
 					encoder.encode(`data: ${JSON.stringify(errorData)}\n\n`)

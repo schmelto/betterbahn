@@ -1,0 +1,10 @@
+{
+	"categories": {
+		"correctness": "error",
+		"nursery": "warn"
+	},
+	"env": {
+		"browser": true,
+		"node": true
+	}
+}

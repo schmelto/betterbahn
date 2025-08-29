@@ -1,10 +1,9 @@
-// Importiere Google Fonts und Komponenten
+import { Footer } from "@/components/Layout/Footer";
+import { Navbar } from "@/components/Layout/Navbar";
 import { Geist, Geist_Mono } from "next/font/google";
+import type { ReactNode } from "react";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 
-// Konfiguriere die Schriftarten
 const geistSans = Geist({
 	variable: "--font-geist-sans",
 	subsets: ["latin"],
@@ -15,24 +14,19 @@ const geistMono = Geist_Mono({
 	subsets: ["latin"],
 });
 
-// Metadaten für die Seite definieren
 export const metadata = {
 	title: "Better Bahn - Split-Ticketing",
 	description: "Eine App von Lukas Weihrauch",
 };
 
-// Haupt-Layout-Komponente für alle Seiten
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
 		<html lang="en">
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased container mx-auto px-2 py-6`}
 			>
-				{/* Navigation einbinden */}
 				<Navbar />
-				{/* Seiteninhalt */}
 				{children}
-				{/* Fußzeile einbinden */}
 				<Footer />
 			</body>
 		</html>

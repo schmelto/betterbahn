@@ -8,11 +8,7 @@ RUN corepack enable
 FROM base AS deps
 WORKDIR /app
 
-# Verhindert, dass Puppeteer beim Installieren Chromium herunterlädt.
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-
 COPY package.json pnpm-lock.yaml ./
-# Führt pnpm install aus, ohne den Browser herunterzuladen
 RUN pnpm install
 
 # Stufe 2: Die Anwendung bauen
@@ -21,12 +17,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Erneut setzen, um sicherzugehen
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV NEXT_TELEMETRY_DISABLED=1
-
 RUN pnpm run build
-
 
 # Stufe 3: Finale, produktive Stufe
 FROM base AS runner
@@ -34,44 +25,7 @@ WORKDIR /app
 
 # Set timezone to Europe/Berlin (German timezone)
 ENV TZ=Europe/Berlin
-RUN apk add --no-cache \
-    ca-certificates \
-    font-liberation \
-    alsa-lib \
-    libatk-1.0 \
-    libatk-bridge-2.0 \
-    glib \
-    dbus-libs \
-    expat \
-    fontconfig \
-    mesa-gbm \
-    libgcc \
-    libstdc++ \
-    gtk+3.0 \
-    nspr \
-    nss \
-    pango \
-    cairo \
-    cups-libs \
-    libx11 \
-    libxcb \
-    libxcomposite \
-    libxcursor \
-    libxdamage \
-    libxext \
-    libxfixes \
-    libxi \
-    libxrandr \
-    libxrender \
-    libxscrnsaver \
-    libxtst \
-    xdg-utils \
-    wget \
-    chromium \
-    tzdata && rm -rf /var/cache/apk/*
-
 ENV NODE_ENV=production
-ENV USE_CHROMIUM_PATH=true
 ENV NEXT_TELEMETRY_DISABLED=1
 
 
