@@ -72,11 +72,11 @@ const formatPriceWithTwoDecimals = (price: VendoPrice | number) => {
         amount = (price);
     }
 
-    if (isNaN(amount)) {
-        return null;
-    }
+	if (isNaN(amount)) {
+		return null;
+	}
 
-    return `${amount.toFixed(2).replace(".", ",")}€`;
+	return `${amount.toFixed(2).replace(".", ",")}€`;
 };
 
 function StatusBox({
@@ -90,10 +90,10 @@ function StatusBox({
 }) {
 	return (
 		<div className="w-full mb-6">
-			<div className="bg-primary text-white rounded-lg p-3 flex flex-col items-center justify-center py-8">
+			<div className="bg-primary text-foreground rounded-lg p-3 flex flex-col items-center justify-center py-8">
 				<div className="flex items-center justify-center mb-2">
 					{isLoading && (
-						<div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-b-transparent mr-3" />
+						<div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-foreground border-b-transparent mr-3" />
 					)}
 					<span className="text-xl font-medium italic">{message}</span>
 				</div>
@@ -110,9 +110,9 @@ function StatusBox({
 							</div>
 						)}
 						{/* Progress bar */}
-						<div className="w-64 bg-white bg-opacity-20 rounded-full h-2 mt-2">
+						<div className="w-64 bg-foreground/20 rounded-full h-2 mt-2">
 							<div
-								className="bg-white h-2 rounded-full transition-all duration-300 ease-out"
+								className="bg-foreground h-2 rounded-full transition-all duration-300 ease-out"
 								style={{
 									width: `${
 										(progressInfo.checked / progressInfo.total) * 100
@@ -137,7 +137,7 @@ function JourneyIcon() {
 		<div className="flex flex-col items-center mr-4 pt-1">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				className="h-6 w-6 text-gray-600"
+				className="h-6 w-6 text-foreground/70"
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"
@@ -149,8 +149,8 @@ function JourneyIcon() {
 					d="M6 20h12M6 16h12M8 16V9a4 4 0 014-4h0a4 4 0 014 4v7"
 				/>
 			</svg>
-			<div className="h-16 w-px bg-gray-300 my-2" />
-			<div className="w-2.5 h-2.5 rounded-full bg-gray-500" />
+			<div className="h-16 w-px bg-foreground/30 my-2"></div>
+			<div className="w-2.5 h-2.5 rounded-full bg-foreground/60"></div>
 		</div>
 	);
 }
@@ -158,7 +158,7 @@ function JourneyIcon() {
 // --- Component: Journey Info Row ---
 function JourneyInfoRow({ children }: { children: ReactNode }) {
 	return (
-		<div className="text-sm text-gray-500 my-2 pl-1 flex items-center">
+		<div className="text-sm text-text-secondary my-2 pl-1 flex items-center">
 			{children}
 		</div>
 	);
@@ -174,14 +174,14 @@ function OriginalJourneyCard({
 }) {
 	if (!extractedData) return null;
 
-    const { hasDeutschlandTicket } = extractedData;
-    const trainLegs = selectedJourney.legs?.filter((leg) => !leg.walking) || [];
-    const isFullyCoveredByDticket =
-        hasDeutschlandTicket &&
-        trainLegs.length > 0 &&
-        trainLegs.every((leg) =>
-            isLegCoveredByDeutschlandTicket(leg, hasDeutschlandTicket)
-        );
+	const { hasDeutschlandTicket } = extractedData;
+	const trainLegs = selectedJourney.legs?.filter((leg) => !leg.walking) || [];
+	const isFullyCoveredByDticket =
+		hasDeutschlandTicket &&
+		trainLegs.length > 0 &&
+		trainLegs.every((leg) =>
+			isLegCoveredByDeutschlandTicket(leg, hasDeutschlandTicket)
+		);
 
 				/**
 				 * TODO formatPriceWithTwoDecimals doesn't handle undefined values,
@@ -192,16 +192,16 @@ function OriginalJourneyCard({
     const formattedPrice = formatPriceWithTwoDecimals(selectedJourney.price);
     let priceDisplay;
 
-    if (formattedPrice !== null) {
-        priceDisplay = formattedPrice;
-    } else if (isFullyCoveredByDticket) {
-        priceDisplay = "0,00€";
-    } else {
-        priceDisplay = "Preis auf Anfrage";
-    }
+	if (formattedPrice !== null) {
+		priceDisplay = formattedPrice;
+	} else if (isFullyCoveredByDticket) {
+		priceDisplay = "0,00€";
+	} else {
+		priceDisplay = "Preis auf Anfrage";
+	}
 
 	const renderSelectedJourney = () => (
-		<div className="border rounded-lg overflow-hidden shadow-sm bg-white border-gray-200">
+		<div className="border rounded-lg overflow-hidden shadow-sm bg-card-bg border-card-border">
 			<div className="p-4">
 				<div className="flex items-start">
 					<JourneyIcon />
@@ -209,19 +209,19 @@ function OriginalJourneyCard({
 						{/* Departure */}
 						<div className="flex justify-between items-start">
 							<div>
-								<span className="font-bold text-xl">
+								<span className="font-bold text-xl text-text-primary">
 									{selectedJourney.legs?.[0]
 										? formatTime(selectedJourney.legs[0].departure)
 										: extractedData.time || ""}
 								</span>
-								<span className="ml-3 text-lg">
+								<span className="ml-3 text-lg text-text-primary">
 									{extractedData.fromStation}
 								</span>
 							</div>
 							<div className="text-right">
 								<div className="font-bold text-lg text-red-600">Original</div>
-								<div className="text-xl font-bold text-gray-900">
-                                    {priceDisplay}
+								<div className="text-xl font-bold text-text-primary">
+									{priceDisplay}
 								</div>
 							</div>
 						</div>
@@ -242,7 +242,7 @@ function OriginalJourneyCard({
 						{/* Arrival */}
 						<div className="flex justify-between items-start mt-2">
 							<div>
-								<span className="font-bold text-xl">
+								<span className="font-bold text-xl text-text-primary">
 									{selectedJourney.legs?.[selectedJourney.legs.length - 1]
 										? formatTime(
 												selectedJourney.legs[selectedJourney.legs.length - 1]
@@ -250,24 +250,26 @@ function OriginalJourneyCard({
 										  )
 										: ""}
 								</span>
-								<span className="ml-3 text-lg">{extractedData.toStation}</span>
+								<span className="ml-3 text-lg text-text-primary">
+									{extractedData.toStation}
+								</span>
 							</div>
 						</div>
 					</div>
 				</div>
 
 				{/* Additional details */}
-				<div className="mt-4 pt-4 border-t border-gray-100">
+				<div className="mt-4 pt-4 border-t border-card-border">
 					<div className="grid grid-cols-2 gap-4 text-sm">
 						<div>
-							<p className="text-gray-600">Klasse</p>
-							<p className="text-gray-800">
+							<p className="text-text-secondary">Klasse</p>
+							<p className="text-text-primary">
 								{extractedData.travelClass || "2"}. Klasse
 							</p>
 						</div>
 						<div>
-							<p className="text-gray-600">BahnCard</p>
-							<p className="text-gray-800">
+							<p className="text-text-secondary">BahnCard</p>
+							<p className="text-text-primary">
 								{extractedData.bahnCard === "none"
 									? "Keine"
 									: `BahnCard ${extractedData.bahnCard}`}
@@ -277,14 +279,14 @@ function OriginalJourneyCard({
 
 					{extractedData.hasDeutschlandTicket && (
 						<div className="mt-2">
-							<p className="text-gray-600 text-sm">Deutschland-Ticket</p>
+							<p className="text-text-secondary text-sm">Deutschland-Ticket</p>
 							<p className="text-green-600 font-medium">✓ Vorhanden</p>
 						</div>
 					)}
 
 					{selectedJourney.price?.hint && (
 						<div className="mt-2">
-							<p className="text-xs text-gray-500">
+							<p className="text-xs text-text-muted">
 								{selectedJourney.price.hint}
 							</p>
 						</div>
@@ -296,11 +298,13 @@ function OriginalJourneyCard({
 
 	return (
 		<div className="space-y-6">
-			<h3 className="font-semibold text-lg text-gray-800">Deine Verbindung</h3>
+			<h3 className="font-semibold text-lg text-text-primary">
+				Deine Verbindung
+			</h3>
 			{selectedJourney ? (
 				renderSelectedJourney()
 			) : (
-				<div className="text-center text-gray-500 py-4">
+				<div className="text-center text-text-secondary py-4">
 					Deine Verbindung wird geladen...
 				</div>
 			)}
@@ -323,21 +327,23 @@ function SplitOptionsCard({
 	const renderContent = () => {
 		if (status === STATUS.SELECTING) {
 			return (
-				<p className="text-gray-600">
+				<p className="text-text-secondary">
 					Bitte wählen Sie eine Verbindung aus der Liste links aus.
 				</p>
 			);
 		}
 
 		if (!selectedJourney) {
-			return <p className="text-gray-600">Keine Verbindung ausgewählt.</p>;
+			return (
+				<p className="text-text-secondary">Keine Verbindung ausgewählt.</p>
+			);
 		}
 
 		if (!splitOptions || status === STATUS.ANALYZING) {
 			return (
 				<div className="flex items-center justify-center py-8">
 					<div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-b-transparent mr-3" />
-					<span className="text-gray-600">Analysiere Optionen...</span>
+					<span className="text-text-secondary">Analysiere Optionen...</span>
 				</div>
 			);
 		}
@@ -354,12 +360,12 @@ function SplitOptionsCard({
 		}
 
 		return (
-			<div className="bg-gray-50 rounded-lg p-4 text-center">
-				<p className="text-gray-600">
+			<div className="bg-background border border-card-border rounded-lg p-4 text-center">
+				<p className="text-text-secondary">
 					Für diese Verbindung konnten keine günstigeren Split-Ticket Optionen
 					gefunden werden.
 				</p>
-				<p className="text-sm text-gray-500 mt-2">
+				<p className="text-sm text-text-muted mt-2">
 					Das ursprüngliche Ticket ist bereits die beste Option.
 				</p>
 			</div>
@@ -368,7 +374,7 @@ function SplitOptionsCard({
 
 	return (
 		<div className="space-y-6">
-			<h3 className="font-semibold text-lg text-gray-800">
+			<h3 className="font-semibold text-lg text-text-primary">
 				Split-Ticket Optionen
 			</h3>
 			{renderContent()}
@@ -598,8 +604,8 @@ function Discount() {
 			<div className="w-full space-y-6">
 				{/* Journey Selection */}
 				{status === STATUS.SELECTING && (
-					<div className="bg-white rounded-lg shadow p-6">
-						<h3 className="font-semibold text-lg mb-4 text-gray-800">
+					<div className="bg-background rounded-lg shadow p-6">
+						<h3 className="font-semibold text-lg mb-4 text-foreground">
 							Wähle deine Verbindung
 						</h3>
 						<JourneyResults
@@ -614,13 +620,13 @@ function Discount() {
 				{/* Comparison View */}
 				{selectedJourney && extractedData && splitOptions && (
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						<div className="bg-white rounded-lg shadow p-6">
+						<div className="bg-background rounded-lg shadow p-6">
 							<OriginalJourneyCard
 								extractedData={extractedData}
 								selectedJourney={selectedJourney}
 							/>
 						</div>
-						<div className="bg-white rounded-lg shadow p-6">
+						<div className="bg-background rounded-lg shadow p-6">
 							<SplitOptionsCard
 								splitOptions={splitOptions}
 								selectedJourney={selectedJourney}

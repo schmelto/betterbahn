@@ -13,13 +13,13 @@ export const URLInput = ({
 	return (
 		<div className="relative">
 			<div className="flex items-center gap-2 mb-2">
-				<label htmlFor="url" className="text-sm font-medium text-gray-700">
+				<label htmlFor="url" className="text-sm font-medium opacity-80">
 					Deutsche Bahn "Verbindung Teilen Text"
 				</label>
 				<button
 					type="button"
 					onClick={() => setShowHelp(!showHelp)}
-					className="inline-flex items-center justify-center w-5 h-5 text-xs bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary"
+					className="inline-flex items-center justify-center w-5 h-5 text-xs bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
 					aria-label="Hilfe anzeigen"
 				>
 					?

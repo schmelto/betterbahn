@@ -36,19 +36,19 @@ export const Segment = ({
 		);
 
 	return (
-		<div className="flex justify-between items-center p-2 rounded-md bg-white border border-gray-200">
+		<div className="flex justify-between items-center p-2 rounded-md bg-background border border-foreground/20">
 			<div className="flex-grow">
-				<div className="font-semibold text-sm text-gray-800 flex items-center gap-2">
+				<div className="font-semibold text-sm text-foreground flex items-center gap-2">
 					{getJourneyLegsWithTransfers(segment).map((leg, legIndex) => (
 						<span key={legIndex} className="flex items-center gap-1">
 							{getLineInfoFromLeg(leg)}
 							{legIndex < getJourneyLegsWithTransfers(segment).length - 1 && (
-								<span className="text-gray-400">→</span>
+								<span className="text-foreground/50">→</span>
 							)}
 						</span>
 					))}
 				</div>
-				<div className="text-xs text-gray-500 mt-1">
+				<div className="text-xs text-foreground/60 mt-1">
 					{getStationName(segment.legs[0].origin)} (
 					{formatTime(segment.legs[0].departure)}) →{" "}
 					{getStationName(segment.legs[segment.legs.length - 1].destination)} (
@@ -86,7 +86,7 @@ export const Segment = ({
 							alert("Failed to generate booking URL.");
 						}
 					}}
-					className="mt-1 px-3 py-1 bg-green-600 text-white text-xs rounded-md "
+					className="mt-1 px-3 py-1 bg-green-600 text-foreground text-xs rounded-md "
 				>
 					Zur Buchung
 				</button>

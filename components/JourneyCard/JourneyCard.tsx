@@ -29,14 +29,14 @@ export const JourneyCard = ({
 		<div
 			className={`border rounded-lg p-4 transition-all duration-200 ${
 				isSelected
-					? "border-blue-500 bg-white shadow-md"
-					: "border-gray-300 bg-gray-50 hover:shadow-md"
+					? "border-blue-500 bg-background shadow-md"
+					: "border-foreground/30 bg-background/60 hover:shadow-md hover:bg-foreground/10"
 			}`}
 		>
 			{/* Journey Header - Similar to SplitOptions */}
 			<div className="flex justify-between items-center mb-2">
 				<div>
-					<span className="text-sm text-gray-500">Journey:</span>
+					<span className="text-sm text-foreground/60">Journey:</span>
 					<span className="text-lg font-bold text-blue-600 ml-2">
 						{formatTime(firstLeg?.departure)} → {formatTime(lastLeg?.arrival)}
 					</span>
@@ -48,15 +48,15 @@ export const JourneyCard = ({
 						)}
 				</div>
 				<div className="text-right">
-					<div className="text-sm text-gray-500">
+					<div className="text-sm text-foreground/60">
 						<JourneyDuration journey={journey} />
 					</div>
-					<div className="text-lg font-bold text-gray-800">{priceDisplay}</div>
+					<div className="text-lg font-bold text-foreground">{priceDisplay}</div>
 				</div>
 			</div>
 
 			{/* Route Summary */}
-			<div className="text-sm text-gray-600 mb-2">
+			<div className="text-sm text-foreground/70 mb-2">
 				{firstLeg?.origin?.name || "Unknown"} →{" "}
 				{lastLeg?.destination?.name || "Unknown"}
 				{transferCountWithoutWalking > 0 && (
@@ -68,7 +68,7 @@ export const JourneyCard = ({
 			</div>
 
 			{/* Journey Legs - Similar to SplitOptions segments */}
-			<div className="text-xs text-gray-500 space-y-1 mb-3">
+			<div className="text-xs text-foreground/60 space-y-1 mb-3">
 				{journey.legs
 					?.filter((leg) => !leg.walking)
 					.map((leg, legIndex) => (
@@ -79,10 +79,10 @@ export const JourneyCard = ({
 			{/* Journey Summary - Similar to SplitOptions pricing summary */}
 			<div className="border-t pt-3 flex justify-between items-center">
 				<div>
-					<div className="text-sm font-medium text-gray-700">
+					<div className="text-sm font-medium text-foreground/80">
 						Total: {priceDisplay}
 					</div>
-					<div className="text-xs text-gray-600">
+					<div className="text-xs text-foreground/70">
 						{travelClass === "1" ? "1st Class" : "2nd Class"}
 						{transferCountWithoutWalking > 0 &&
 							transferStationsWithoutWalking.length > 0 && (
@@ -94,7 +94,7 @@ export const JourneyCard = ({
 					</div>
 				</div>
 				<div className="text-right">
-					<div className="text-xs text-gray-500">
+					<div className="text-xs text-foreground/60">
 						<JourneyDuration journey={journey} />
 					</div>
 					<div className="text-xs text-blue-600">

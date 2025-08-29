@@ -21,9 +21,9 @@ export const JourneyResults = ({
 	}
 
 	return (
-		<div className="bg-white rounded-lg shadow-md p-6">
+		<div className="bg-background rounded-lg shadow-md p-6">
 			{/* Überschrift für verfügbare Verbindungen */}
-			<h2 className="text-xl font-bold mb-4 text-gray-800">
+			<h2 className="text-xl font-bold mb-4 text-foreground">
 				Available Journeys
 			</h2>
 			<div className="space-y-4">
@@ -33,10 +33,10 @@ export const JourneyResults = ({
 					return (
 						<div
 							key={index}
-							className={`bg-gray-50 rounded-lg p-4 transition-all duration-200 ${
+							className={`bg-background/60 rounded-lg p-4 transition-all duration-200 ${
 								isSelected
-									? "ring-2 ring-blue-500 bg-blue-50"
-									: "hover:bg-gray-100 cursor-pointer"
+									? "ring-2 ring-blue-500 bg-blue-500/10"
+									: "hover:bg-foreground/10 cursor-pointer"
 							}`}
 							onClick={() => onJourneySelect && onJourneySelect(journey, index)}
 						>
@@ -49,8 +49,8 @@ export const JourneyResults = ({
 
 							{/* Zeige Auswahl-Bestätigung für ausgewählte Verbindung */}
 							{isSelected && (
-								<div className="mt-3 p-3 bg-blue-100 rounded-lg border-l-4 border-blue-500">
-									<p className="text-blue-800 text-sm font-medium">
+								<div className="mt-3 p-3 bg-blue-500/15 rounded-lg border-l-4 border-blue-500">
+									<p className="text-blue-600 dark:text-blue-400 text-sm font-medium">
 										✅ Diese Verbindung ausgewählt - Scroll nach unten für
 										Split-Ticket Analyse
 									</p>

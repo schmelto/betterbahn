@@ -1,49 +1,46 @@
 # Dockerfile
+FROM node:24-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
 # Stufe 1: Abhängigkeiten installieren
-# Wechsel zu einem Debian-basierten Image (node:18) für bessere Kompatibilität.
-FROM node:18 AS deps
+FROM base AS deps
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
 
 # Stufe 2: Die Anwendung bauen
-FROM node:18 AS builder
+FROM base AS builder
+
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 # Stufe 3: Finale, produktive Stufe
-FROM node:18 AS runner
+FROM base AS runner
 WORKDIR /app
 
 # Set timezone to Europe/Berlin (German timezone)
 ENV TZ=Europe/Berlin
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
 
 # Kopieren des Standalone-Outputs aus der Builder-Stufe
-# Anpassen des Besitzers an den Standard 'node' Benutzer
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# ---- HINZUGEFÜGT FÜR db-hafas-stations ----
 # Kopiert manuell das Modul, dessen Datendateien vom 'standalone'-Modus nicht erfasst werden.
-COPY --from=builder --chown=node:node /app/node_modules/db-hafas-stations ./node_modules/db-hafas-stations
-# ---- ENDE db-hafas-stations-ZUSATZ ----
-
-# ---- PRÄVENTIVE LÖSUNG FÜR FEHLENDE DATEIEN ----
-# HINWEIS: Dieser Ansatz löst Probleme mit fehlenden Dateien (wie .json, .sql etc.),
-# führt aber zu einem DEUTLICH GRÖSSEREN Docker-Image, da der Vorteil von 'output: standalone'
-# teilweise aufgehoben wird. Dies stellt sicher, dass alle Pakete vollständig sind.
-# COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-# ---- ENDE PRÄVENTIVE LÖSUNG ----
+COPY --from=builder /app/node_modules/db-hafas-stations ./node_modules/db-hafas-stations
 
 # Wechsel zum non-root 'node' Benutzer für erhöhte Sicherheit
 USER node
 
+# Expose port and add healthcheck
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD curl -f http://localhost:3000 || exit 1
+
 CMD ["node", "server.js"]

@@ -14,17 +14,35 @@ This is not an official repository or project of Deutsche Bahn AG. It is an inde
 
 To run the project locally:
 
-1. Clone the repository
-2. Install dependencies with `npm install`
-3. Start the development server with `npm run dev`
+
+1. Clone the repository and navigate to the folder
+2. Install dependencies with `pnpm install`
+
+	 You can install pnpm via corepack (included with Node.js):
+	```
+	corepack enable
+	corepack prepare pnpm@latest --activate
+	```
+3. Start the development server with `pnpm run dev`
+
 
 ## Docker
 
 You can also build and run BetterBahn as a Docker container. A `Dockerfile` is included in the repository.
 
+## Docker Compose
+
+You can run the app with docker compose:
+
+### Default/Development
+
+`docker compose -f docker-compose/docker-compose.yaml --project-directory=./ up -d`
+
+http://localhost:3000
+
 ## License
 
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International Public License (CC BY-NC 4.0). See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the AGPL-3.0-only. See the [LICENSE](./LICENSE) file for details.
 
 ## Community and Contribution
 

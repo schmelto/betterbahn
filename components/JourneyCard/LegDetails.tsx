@@ -15,7 +15,7 @@ export const LegDetails = ({
 }) => {
 	if (leg.walking) {
 		return (
-			<div className="text-xs text-gray-600 py-1">
+			<div className="text-xs text-foreground/70 py-1">
 				<span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
 					🚶 Walk {formatDuration(leg.duration)}
 				</span>
@@ -32,7 +32,7 @@ export const LegDetails = ({
 						<TrainIdentifier leg={leg} />
 					</span>
 					{leg.line?.mode && (
-						<span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">
+						<span className="bg-foreground/10 text-foreground/80 px-2 py-1 rounded text-xs">
 							{typeof leg.line.mode === "string"
 								? leg.line.mode
 								: JSON.stringify(leg.line.mode)}
@@ -40,7 +40,7 @@ export const LegDetails = ({
 					)}
 				</span>
 			</div>
-			<div className="ml-4 text-xs text-gray-600">
+			<div className="ml-4 text-xs text-foreground//0">
 				<span className="font-medium">{leg.origin?.name}</span>
 				<span className="mx-1">
 					({formatTime(leg.departure)}
@@ -52,7 +52,7 @@ export const LegDetails = ({
 					({formatTime(leg.arrival)}
 					{leg.arrivalPlatform && <span>, Pl. {leg.arrivalPlatform}</span>})
 				</span>
-				<span className="ml-2 text-gray-500">
+				<span className="ml-2 text-foreground/60">
 					<LegDuration leg={leg} />
 				</span>
 				{leg.delay && leg.delay > 0 && (
