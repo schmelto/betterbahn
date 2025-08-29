@@ -219,7 +219,7 @@ async function getResolvedUrlBrowserless(url: string) {
 	);
 
 	if (!response.ok) {
-		throw new Error(`Failed to fetch journey data: ${response.status}`);
+		throw new Error(`Failed to fetch journey data: ${response.status} ${response.statusText}`);
 	}
 
 	const json = await response.json();
