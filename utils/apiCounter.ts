@@ -27,7 +27,7 @@ export function incrementApiCount(endpoint: string, description = "") {
 		`Requests in last minute: ${requestTimes.length}/${MAX_REQUESTS_PER_MINUTE}`
 	);
 
-	// Warnung wenn Rate-Limit sich nähert
+	// Warnung, wenn Rate-Limit sich nähert
 	if (requestTimes.length >= MAX_REQUESTS_PER_MINUTE * 0.8) {
 		console.log(
 			`⚠️  WARNING: Approaching rate limit! (${requestTimes.length}/${MAX_REQUESTS_PER_MINUTE})`

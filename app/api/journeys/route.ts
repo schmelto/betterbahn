@@ -38,7 +38,7 @@ const handler = async (request: Request) => {
 		);
 	}
 
-	// Validiere dass Abfahrtszeit nicht in der Vergangenheit liegt
+	// Validiere, dass Abfahrtszeit nicht in der Vergangenheit liegt
 	if (departure) {
 		const departureDate = new Date(departure);
 		const now = new Date();
@@ -63,12 +63,12 @@ const handler = async (request: Request) => {
 		firstClass: parseInt(travelClass) === 1, // true für erste Klasse, false für zweite Klasse
 	};
 
-	// Abfahrtszeit hinzufügen falls angegeben
+	// Abfahrtszeit hinzufügen, falls angegeben
 	if (departure) {
 		options.departure = new Date(departure);
 	}
 
-	// BahnCard-Rabattkarte hinzufügen falls angegeben
+	// BahnCard-Rabattkarte hinzufügen, falls angegeben
 	if (bahnCard && bahnCard !== "none") {
 		const discount = parseInt(bahnCard);
 		if ([25, 50, 100].includes(discount)) {
@@ -88,7 +88,7 @@ const handler = async (request: Request) => {
 	// Deutschland-Ticket Optionen für genauere Preisgestaltung
 	if (hasDeutschlandTicket) {
 		options.deutschlandTicketDiscount = true;
-		// Diese Option kann helfen, genauere Preise zurückzugeben wenn Deutschland-Ticket verfügbar ist
+		// Diese Option kann helfen, genauere Preise zurückzugeben, wenn Deutschland-Ticket verfügbar ist
 		options.deutschlandTicketConnectionsOnly = false; // Wir wollen alle Verbindungen, aber mit genauen Preisen
 	}
 
