@@ -10,5 +10,8 @@ dist/
 # Enviroment files
 .env
 
+# JetBrains editors
+.idea
+
 # etc
 .DS_Store
