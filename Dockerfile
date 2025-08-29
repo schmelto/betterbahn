@@ -1,28 +1,35 @@
 # Dockerfile
+FROM node:24-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
 # Stufe 1: Abhängigkeiten installieren
-FROM node:24-alpine AS deps
+FROM base AS deps
 WORKDIR /app
 
 # Verhindert, dass Puppeteer beim Installieren Chromium herunterlädt.
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-COPY package.json package-lock.json ./
-# Führt npm install aus, ohne den Browser herunterzuladen
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
+# Führt pnpm install aus, ohne den Browser herunterzuladen
+RUN pnpm install
 
 # Stufe 2: Die Anwendung bauen
-FROM node:24-alpine AS builder
+FROM base AS builder
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Erneut setzen, um sicherzugehen
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-RUN npm run build
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN pnpm run build
+
 
 # Stufe 3: Finale, produktive Stufe
-FROM node:24-alpine AS runner
+FROM base AS runner
 WORKDIR /app
 
 # Set timezone to Europe/Berlin (German timezone)
@@ -65,6 +72,8 @@ RUN apk add --no-cache \
 
 ENV NODE_ENV=production
 ENV USE_CHROMIUM_PATH=true
+ENV NEXT_TELEMETRY_DISABLED=1
+
 
 # Kopieren des Standalone-Outputs aus der Builder-Stufe
 COPY --from=builder /app/.next/standalone ./

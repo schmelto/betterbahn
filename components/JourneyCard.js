@@ -61,7 +61,7 @@ const formatDate = (dateString) => {
 const LegDetails = ({ leg, legIndex, isLast }) => {
 	if (leg.walking) {
 		return (
-			<div className="text-xs text-gray-600 py-1">
+			<div className="text-xs text-foreground/70 py-1">
 				<span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
 					🚶 Walk {formatDuration(leg.duration)}
 				</span>
@@ -87,7 +87,7 @@ const LegDetails = ({ leg, legIndex, isLast }) => {
 						})()}
 					</span>
 					{leg.line?.mode && (
-						<span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">
+						<span className="bg-foreground/10 text-foreground/80 px-2 py-1 rounded text-xs">
 							{typeof leg.line.mode === "string"
 								? leg.line.mode
 								: JSON.stringify(leg.line.mode)}
@@ -95,7 +95,7 @@ const LegDetails = ({ leg, legIndex, isLast }) => {
 					)}
 				</span>
 			</div>
-			<div className="ml-4 text-xs text-gray-600">
+			<div className="ml-4 text-xs text-foreground/70">
 				<span className="font-medium">{leg.origin?.name}</span>
 				<span className="mx-1">
 					({formatTime(leg.departure)}
@@ -107,7 +107,7 @@ const LegDetails = ({ leg, legIndex, isLast }) => {
 					({formatTime(leg.arrival)}
 					{leg.arrivalPlatform && <span>, Pl. {leg.arrivalPlatform}</span>})
 				</span>
-				<span className="ml-2 text-gray-500">
+				<span className="ml-2 text-foreground/60">
 					{leg.duration
 						? formatDuration(leg.duration)
 						: (() => {
@@ -187,14 +187,14 @@ const JourneyCard = ({
 		<div
 			className={`border rounded-lg p-4 transition-all duration-200 ${
 				isSelected
-					? "border-blue-500 bg-white shadow-md"
-					: "border-gray-300 bg-gray-50 hover:shadow-md"
+					? "border-blue-500 bg-background shadow-md"
+					: "border-foreground/30 bg-background/60 hover:shadow-md hover:bg-foreground/10"
 			}`}
 		>
 			{/* Journey Header - Similar to SplitOptions */}
 			<div className="flex justify-between items-center mb-2">
 				<div>
-					<span className="text-sm text-gray-500">Journey:</span>
+					<span className="text-sm text-foreground/60">Journey:</span>
 					<span className="text-lg font-bold text-blue-600 ml-2">
 						{formatTime(departure)} → {formatTime(arrival)}
 					</span>
@@ -205,7 +205,7 @@ const JourneyCard = ({
 					)}
 				</div>
 				<div className="text-right">
-					<div className="text-sm text-gray-500">
+					<div className="text-sm text-foreground/60">
 						{(() => {
 							// Try to get journey duration, calculate if missing
 							if (journey.duration) {
@@ -234,12 +234,14 @@ const JourneyCard = ({
 							return "Duration unavailable";
 						})()}
 					</div>
-					<div className="text-lg font-bold text-gray-800">{priceDisplay}</div>
+					<div className="text-lg font-bold text-foreground">
+						{priceDisplay}
+					</div>
 				</div>
 			</div>
 
 			{/* Route Summary */}
-			<div className="text-sm text-gray-600 mb-2">
+			<div className="text-sm text-foreground/70 mb-2">
 				{origin.name} → {destination.name}
 				{transferCount > 0 && (
 					<span className="ml-2 text-xs text-orange-600">
@@ -249,7 +251,7 @@ const JourneyCard = ({
 			</div>
 
 			{/* Journey Legs - Similar to SplitOptions segments */}
-			<div className="text-xs text-gray-500 space-y-1 mb-3">
+			<div className="text-xs text-foreground/60 space-y-1 mb-3">
 				{journey.legs
 					?.filter((leg) => !leg.walking)
 					.map((leg, legIndex) => (
@@ -267,10 +269,10 @@ const JourneyCard = ({
 			{/* Journey Summary - Similar to SplitOptions pricing summary */}
 			<div className="border-t pt-3 flex justify-between items-center">
 				<div>
-					<div className="text-sm font-medium text-gray-700">
+					<div className="text-sm font-medium text-foreground/80">
 						Total: {priceDisplay}
 					</div>
-					<div className="text-xs text-gray-600">
+					<div className="text-xs text-foreground/70">
 						{classDisplay}
 						{transferCount > 0 && transferStations.length > 0 && (
 							<span className="ml-2">
@@ -280,7 +282,7 @@ const JourneyCard = ({
 					</div>
 				</div>
 				<div className="text-right">
-					<div className="text-xs text-gray-500">
+					<div className="text-xs text-foreground/60">
 						{(() => {
 							// Try to get journey duration, calculate if missing
 							if (journey.duration) {
