@@ -1,6 +1,7 @@
 "use client";
 
 import type { VendoJourney } from "@/utils/schemas";
+import { formatPriceDE } from "@/utils/priceUtils";
 import { getTransferStations } from "./getTransferStations";
 import { formatDate, formatTime } from "./journey-card-utils";
 import { JourneyDuration } from "./JourneyDuration";
@@ -21,8 +22,8 @@ export const JourneyCard = ({
 	const transferCountWithoutWalking = Math.max(0, nonWalkingLegs.length - 1);
 	const transferStationsWithoutWalking = getTransferStations(nonWalkingLegs);
 
-	const priceDisplay = journey.price?.amount
-		? `€${journey.price.amount.toFixed(2)}`
+	const priceDisplay = journey.price?.amount != null
+		? formatPriceDE(journey.price.amount)
 		: "Price on request";
 
 	return (

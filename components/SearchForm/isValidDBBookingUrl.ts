@@ -2,7 +2,7 @@ export const isValidDBBookingUrl = (url: string) => {
 	try {
 		const urlObj = new URL(url);
 
-		// Überprüfe ob es eine gültige Bahn.de Buchungs-URL ist
+		// Überprüfe, ob es eine gültige Bahn.de Buchungs-URL ist
 		if (!urlObj.hostname.includes("bahn.de")) {
 			return false;
 		}

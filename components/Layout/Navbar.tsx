@@ -16,7 +16,7 @@ export const Navbar = () => {
 				<div className="text-xs sm:text-lg md:text-xl">
 					<Link href="/" className="no-underline">
 						<span className="sr-only">Better Bahn - Startseite</span>
-						<span className="font-bold border-primary text-primary rounded-xl p-1.5 border-4">
+						<span className="font-bold border-primary text-primary dark:text-foreground dark:border-foreground rounded-xl p-1.5 border-4">
 							Better Bahn
 						</span>{" "}
 					</Link>

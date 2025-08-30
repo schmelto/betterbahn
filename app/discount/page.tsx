@@ -90,7 +90,7 @@ function StatusBox({
 }) {
 	return (
 		<div className="w-full mb-6">
-			<div className="bg-primary text-foreground rounded-lg p-3 flex flex-col items-center justify-center py-8">
+			<div className="bg-primary text-white rounded-lg p-3 flex flex-col items-center justify-center py-8">
 				<div className="flex items-center justify-center mb-2">
 					{isLoading && (
 						<div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-foreground border-b-transparent mr-3" />
