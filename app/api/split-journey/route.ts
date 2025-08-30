@@ -26,7 +26,7 @@ const handler = async (request: Request) => {
 		useStreaming,
 	} = await request.json();
 
-	// Validiere dass originalJourney vorhanden ist
+	// Validiere, dass originalJourney vorhanden ist
 	if (!originalJourney?.legs) {
 		return Response.json({ error: "Missing originalJourney" }, { status: 400 });
 	}
@@ -42,7 +42,7 @@ const handler = async (request: Request) => {
 		});
 	}
 
-	// Behandle Streaming-Response falls gewünscht
+	// Behandle Streaming-Response, falls gewünscht
 	if (useStreaming) {
 		return handleStreamingResponse(
 			originalJourney,
