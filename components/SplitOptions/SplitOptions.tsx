@@ -8,7 +8,7 @@ import {
 	formatTime,
 	getStationName,
 } from "../../utils/journeyUtils";
-import { formatPriceDE } from "./formatPriceDE";
+import { formatPriceDE } from "@/utils/priceUtils";
 import { getOptionsToShow } from "./getOptionsToShow";
 import { Segment } from "./Segment";
 

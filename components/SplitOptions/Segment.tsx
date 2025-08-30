@@ -10,7 +10,7 @@ import {
 	getLineInfoFromLeg,
 	getStationName,
 } from "@/utils/journeyUtils";
-import { formatPriceDE } from "./formatPriceDE";
+import { formatPriceDE } from "@/utils/priceUtils";
 
 export const Segment = ({
 	segment,
@@ -70,7 +70,11 @@ export const Segment = ({
 							{segmentHasFlixTrain ? "FlixTrain" : "Price unknown"}
 						</span>
 					) : (
-						<span>{segment.price && formatPriceDE(segment.price.amount)}</span>
+						<span>
+							{segment.price?.amount != null 
+								? formatPriceDE(segment.price.amount)
+								: "Price on request"}
+						</span>
 					)}
 				</div>
 				<button
