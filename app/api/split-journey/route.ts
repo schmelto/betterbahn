@@ -4,7 +4,7 @@ import { createClient } from "db-vendo-client";
 import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
 import { profile as dbProfile } from "db-vendo-client/p/db/index";
 import { z } from "zod/v4";
-import { getApiCount, incrementApiCount } from "../../../utils/apiCounter";
+import { getApiCount, incrementApiCount } from "@/utils/apiCounter";
 import { apiErrorHandler } from "../_lib/error-handler";
 
 const client = createClient(dbProfile, "mail@lukasweihrauch.de");

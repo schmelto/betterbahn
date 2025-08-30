@@ -7,7 +7,7 @@ import {
 	getApiCount,
 	incrementApiCount,
 	resetApiCount,
-} from "../../../utils/apiCounter";
+} from "@/utils/apiCounter";
 import { apiErrorHandler } from "../_lib/error-handler";
 
 const userAgent = "mail@lukasweihrauch.de";
