@@ -56,7 +56,7 @@ const handler = async (request: Request) => {
 		results: departure ? 5 : parseInt(results), // Weniger Ergebnisse bei genauer Zeit um Rauschen zu reduzieren
 		stopovers: true,
 		// Bei genauer Abfahrtszeit wollen wir exakte Treffer, nicht verschiedene Alternativen
-		notOnlyFastRoutes: departure ? false : true, // Nur schnelle Routen bei genauer Zeit
+		notOnlyFastRoutes: !departure, // Nur schnelle Routen bei genauer Zeit
 		remarks: true, // Verbindungshinweise einschließen
 		transfers: -1, // System entscheidet über optimale Anzahl Umstiege
 		// Reiseklasse-Präferenz setzen - verwende firstClass boolean Parameter
