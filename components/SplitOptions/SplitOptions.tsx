@@ -97,7 +97,7 @@ export const SplitOptions = ({
 							key={splitIndex}
 							className={`border rounded-lg overflow-hidden shadow-sm transition-all duration-300 ${
 								splitPricing.hasPartialPricing
-									? "border-orange-300 bg-orange-50"
+									? "border-orange-300 bg-background"
 									: "border-foreground/20 bg-background"
 							} ${isExpanded ? "shadow-lg" : ""}`}
 						>
@@ -241,7 +241,7 @@ export const SplitOptions = ({
 											))}
 										</div>
 										{splitPricing.hasPartialPricing && (
-											<div className="mt-3 text-xs text-orange-700 p-2 bg-orange-100 rounded-md border border-orange-200">
+											<div className="mt-3 text-xs text-foreground p-2 bg-background rounded-md border border-orange-200">
 												* Some segments have unknown pricing (e.g., regional
 												trains, FlixTrain). The total price and savings are
 												based on available data.
