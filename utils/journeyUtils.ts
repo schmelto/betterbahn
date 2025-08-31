@@ -61,8 +61,7 @@ export const getLineInfoFromLeg = (leg: VendoLeg) => {
 export const getStationName = (stop?: VendoOriginOrDestination) =>
 	stop?.station?.name || stop?.name || "Unknown";
 
-// Calculate transfer time in minutes
-export const calculateTransferTime = (leg: VendoLeg) => {
+export const calculateTransferTimeInMinutes = (leg: VendoLeg) => {
 	if (!leg.walking || !leg.departure || !leg.arrival) return 0;
 	return Math.round(
 		(new Date(leg.arrival).getTime() - new Date(leg.departure).getTime()) /
@@ -80,7 +79,7 @@ export const getJourneyLegsWithTransfers = (journey: VendoJourney) => {
 			const next = legs[i + 1];
 			return {
 				...leg,
-				transferTimeAfter: next?.walking ? calculateTransferTime(next) : 0,
+				transferTimeAfter: next?.walking ? calculateTransferTimeInMinutes(next) : 0,
 			};
 		})
 		.filter(Boolean) as (VendoLeg & { transferTimeAfter: number })[];
