@@ -1,20 +1,22 @@
 "use client";
 
-// Importiere JourneyCard-Komponente
-import JourneyCard from "./JourneyCard";
+import type { VendoJourney } from "@/utils/schemas";
+import { JourneyCard } from "./JourneyCard/JourneyCard";
 
 // Komponente zur Anzeige aller gefundenen Verbindungen
-const JourneyResults = ({
+export const JourneyResults = ({
 	journeys,
-	bahnCard,
-	hasDeutschlandTicket,
-	passengerAge,
 	travelClass,
 	onJourneySelect,
 	selectedJourney,
+}: {
+	journeys: VendoJourney[];
+	travelClass?: string;
+	onJourneySelect?: (journey: VendoJourney, index: number) => unknown;
+	selectedJourney: VendoJourney | null;
 }) => {
 	// Zeige nichts an, falls keine Verbindungen vorhanden
-	if (!journeys || journeys.length === 0) {
+	if (journeys.length === 0) {
 		return null;
 	}
 
@@ -41,9 +43,6 @@ const JourneyResults = ({
 							{/* Zeige einzelne Verbindungskarte an */}
 							<JourneyCard
 								journey={journey}
-								index={index}
-								bahnCard={bahnCard}
-								hasDeutschlandTicket={hasDeutschlandTicket}
 								travelClass={travelClass}
 								isSelected={isSelected}
 							/>
@@ -64,5 +63,3 @@ const JourneyResults = ({
 		</div>
 	);
 };
-
-export default JourneyResults;

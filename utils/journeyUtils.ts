@@ -1,25 +1,31 @@
-// Hilfsfunktionen für Reiseberechnungen und Formatierung
+import type { ExtractedData } from "./types";
+import type {
+	VendoJourney,
+	VendoLeg,
+	VendoOriginOrDestination,
+} from "@/utils/schemas";
 
 // Formatiere Zeit von ISO-String zu HH:MM
-export const formatTime = (dateString) => {
-	if (!dateString) return "Unknown";
+export const formatTime = (dateString: string) => {
 	const date = new Date(dateString);
-	if (isNaN(date)) {
+
+	if (isNaN(date.getTime())) {
 		console.error("Invalid date string:", dateString);
 		return "Invalid time";
 	}
+
 	try {
 		return date.toLocaleTimeString("de-DE", {
 			hour: "2-digit",
 			minute: "2-digit",
 		});
-	} catch (e) {
+	} catch {
 		return "Invalid time"; // Fallback bei unwahrscheinlichem Locale-Fehler
 	}
 };
 
 // Berechne und formatiere Reisedauer
-export const formatDuration = (journey) => {
+export const formatDuration = (journey: { legs: VendoLeg[] }) => {
 	const legs = journey?.legs;
 	if (!legs?.length) return "Unknown duration";
 	const firstLeg = legs[0];
@@ -28,9 +34,11 @@ export const formatDuration = (journey) => {
 
 	const departure = new Date(firstLeg.departure);
 	const arrival = new Date(lastLeg.arrival);
-	if (isNaN(departure) || isNaN(arrival)) return "Invalid duration";
+	if (isNaN(departure.getTime()) || isNaN(arrival.getTime())) {
+		return "Invalid duration";
+	}
 
-	const diff = arrival - departure;
+	const diff = arrival.getTime() - departure.getTime();
 	if (diff < 0) return "Invalid duration";
 	if (diff > 24 * 60 * 60 * 1000) return "Long journey";
 
@@ -38,35 +46,43 @@ export const formatDuration = (journey) => {
 	return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 };
 
-// Hole Zuglinie-Informationen aus einem Leg
-export const getLineInfo = (leg) => {
+export const getLineInfoFromLeg = (leg: VendoLeg) => {
 	if (leg.walking) return null;
 	return leg.line?.name || leg.line?.product || "Unknown";
 };
 
-// Hole Stationsnamen aus Stop-Objekt
-export const getStationName = (stop) =>
+/**
+ * TODO:
+ * looking at the original code, it's unclear to me which type of arg
+ * this function exactly permits.
+ * it's called with leg.origin and leg.destination, which can be stations,
+ * stops, or locations, not *just* stops.
+ */
+export const getStationName = (stop?: VendoOriginOrDestination) =>
 	stop?.station?.name || stop?.name || "Unknown";
 
-// Calculate transfer time in minutes
-export const calculateTransferTime = (leg) => {
+export const calculateTransferTimeInMinutes = (leg: VendoLeg) => {
 	if (!leg.walking || !leg.departure || !leg.arrival) return 0;
-	return Math.round((new Date(leg.arrival) - new Date(leg.departure)) / 60000);
+	return Math.round(
+		(new Date(leg.arrival).getTime() - new Date(leg.departure).getTime()) /
+			60000
+	);
 };
 
 // Filter out walking legs and get non-walking legs with transfer times
-export const getJourneyLegsWithTransfers = (journey) => {
+export const getJourneyLegsWithTransfers = (journey: VendoJourney) => {
 	const legs = journey?.legs || [];
+
 	return legs
 		.map((leg, i) => {
 			if (leg.walking) return null;
 			const next = legs[i + 1];
 			return {
 				...leg,
-				transferTimeAfter: next?.walking ? calculateTransferTime(next) : 0,
+				transferTimeAfter: next?.walking ? calculateTransferTimeInMinutes(next) : 0,
 			};
 		})
-		.filter(Boolean);
+		.filter(Boolean) as (VendoLeg & { transferTimeAfter: number })[];
 };
 
 // =================
@@ -74,12 +90,12 @@ export const getJourneyLegsWithTransfers = (journey) => {
 // =================
 
 /**
- * Searches for journeys using the extracted data
  * @param {Object} extractedData - The journey data extracted from URL
- * @returns {Promise<Array>} Array of journey objects
  * @throws {Error} When API call fails or returns error
  */
-export const searchForJourneys = async (extractedData) => {
+export const searchForJourneys = async (
+	extractedData: ExtractedData
+): Promise<VendoJourney[]> => {
 	const {
 		fromStationId,
 		toStationId,
@@ -136,8 +152,10 @@ export const searchForJourneys = async (extractedData) => {
 
 		return data.journeys || [];
 	} catch (error) {
+		const typedError = error as { message: string };
+
 		// Re-throw with more user-friendly message if it's a network error
-		if (error.message.includes("fetch")) {
+		if (typedError.message.includes("fetch")) {
 			throw new Error(
 				"Netzwerkfehler: Bitte überprüfe deine Internetverbindung"
 			);
@@ -145,11 +163,3 @@ export const searchForJourneys = async (extractedData) => {
 		throw error;
 	}
 };
-
-/**
- * Validates if the extracted data has the minimum required fields
- * @param {Object} extractedData - The journey data to validate
- * @returns {boolean} True if data is valid
- */
-export const validateJourneyData = (extractedData) =>
-	Boolean(extractedData.fromStationId && extractedData.toStationId);

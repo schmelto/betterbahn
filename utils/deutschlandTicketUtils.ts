@@ -1,5 +1,5 @@
-// Importiere Hilfsfunktion für Stationsnamen
-import { getStationName } from "./journeyUtils.js";
+import type { VendoLeg } from "@/utils/schemas";
+import { getStationName } from "./journeyUtils";
 
 // Definiere spezifische IC/ICE-Strecken, die vom Deutschland-Ticket abgedeckt werden
 const deutschlandTicketICRoutes = [
@@ -94,8 +94,7 @@ const deutschlandTicketICRoutes = [
 	},
 ];
 
-// Check if an IC/ICE route is covered by Deutschland-Ticket
-export const isICRouteCoveredByDeutschlandTicket = (leg) => {
+export const isICRouteCoveredByDeutschlandTicket = (leg: VendoLeg) => {
 	if (!leg?.line || !leg.origin || !leg.destination) return false;
 	const product = leg.line.product?.toLowerCase();
 	if (!product || !["national", "nationalexpress"].includes(product))
@@ -127,19 +126,17 @@ export const isICRouteCoveredByDeutschlandTicket = (leg) => {
 	});
 };
 
-// Check if a leg is a FlixTrain service
-export const isFlixTrain = (leg) => {
+export const legIsFlixTrain = (leg: VendoLeg) => {
 	if (!leg?.line) return false;
 	const name = leg.line.name?.toUpperCase() || "";
 	const product = leg.line.product?.toUpperCase() || "";
 	return /FLX|FLIXTRAIN/.test(name + product);
 };
 
-// Check if individual leg is covered by Deutschland-Ticket
-export const isLegCoveredByDeutschlandTicket = (leg, hasDeutschlandTicket) => {
+export const isLegCoveredByDeutschlandTicket = (leg: VendoLeg, hasDeutschlandTicket: boolean) => {
 	if (!hasDeutschlandTicket) return false;
 	if (leg.walking) return true;
-	if (!leg.line || isFlixTrain(leg)) return false; // FlixTrains never covered
+	if (!leg.line || legIsFlixTrain(leg)) return false; // FlixTrains never covered
 	const product = leg.line.product?.toLowerCase() || "";
 	return (
 		!["nationalexpress", "national"].includes(product) ||
