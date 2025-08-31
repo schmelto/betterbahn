@@ -18,7 +18,6 @@ interface Station {
  * @returns {string} Formatted date string
  */
 function formatDate(date: string): string {
-	if (typeof date !== "string") return date;
 	let formatted = date
 		.replace(/\+\d{2}:\d{2}$/, "")
 		.replace(/Z$/, "")
