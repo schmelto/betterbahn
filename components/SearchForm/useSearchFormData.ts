@@ -4,6 +4,7 @@ export interface Updates {
 	bahnCard?: string;
 	passengerAge?: string;
 	hasDeutschlandTicket?: boolean;
+	travelClass?: string;
 }
 
 export interface FormState {
@@ -39,6 +40,9 @@ const loadSettingsFromLocalStorage = () => {
 	const storageDTicket = localStorage.getItem(
 		"betterbahn/settings/hasDeutschlandTicket"
 	);
+	const storageTravelClass = localStorage.getItem(
+		"betterbahn/settings/travelClass"
+	);
 
 	const updates: Partial<FormState> = {};
 
@@ -52,6 +56,10 @@ const loadSettingsFromLocalStorage = () => {
 
 	if (storageDTicket != null) {
 		updates.hasDeutschlandTicket = storageDTicket === "true";
+	}
+
+	if (storageTravelClass != null) {
+		updates.travelClass = storageTravelClass;
 	}
 
 	return updates;
@@ -71,6 +79,12 @@ const updateLocalStorage = (updates: Updates) => {
 		localStorage.setItem(
 			"betterbahn/settings/passengerAge",
 			updates.passengerAge
+		);
+	}
+	if(updates.travelClass != null) {
+		localStorage.setItem(
+			"betterbahn/settings/travelClass",
+			updates.travelClass
 		);
 	}
 };
