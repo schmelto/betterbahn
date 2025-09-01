@@ -18,14 +18,13 @@ interface Station {
  * @returns {string} Formatted date string
  */
 function formatDate(date: string): string {
-	if (typeof date !== "string") return date;
-	let formatted = date
+	let formattedDate = date
 		.replace(/\+\d{2}:\d{2}$/, "")
 		.replace(/Z$/, "")
 		.replace(/\.\d{3}/, "");
-	if (/T\d{2}:\d{2}$/.test(formatted)) formatted += ":58"; // ensure seconds
-	if (!formatted.includes("T")) formatted += "T08:32:58"; // default time
-	return formatted;
+	if (/T\d{2}:\d{2}$/.test(formattedDate)) formattedDate += ":58"; // ensure seconds
+	if (!formattedDate.includes("T")) formattedDate += "T08:32:58"; // default time
+	return formattedDate;
 }
 
 /**
