@@ -1,7 +1,14 @@
 {
 	"categories": {
 		"correctness": "error",
-		"nursery": "warn"
+		"nursery": "warn",
+		"pedantic": "warn",
+		"suspicious": "warn"
+	},
+	"rules": {
+		"max-lines-per-function": "off",
+		"max-lines": "off",
+		"max-depth": "off"
 	},
 	"env": {
 		"browser": true,

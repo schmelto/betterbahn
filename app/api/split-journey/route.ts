@@ -84,7 +84,7 @@ const handler = async (request: Request) => {
 	});
 };
 
-export async function POST(request: Request) {
+export function POST(request: Request) {
 	return apiErrorHandler(() => handler(request));
 }
 
@@ -141,7 +141,7 @@ function buildQueryOptions({
 }
 
 function extractSplitPoints(journey: VendoJourney) {
-	const map = new Map();
+	const map = new Map<string, SplitPoint>();
 
 	journey.legs.forEach((leg, legIndex) => {
 		if (leg.walking || !leg.stopovers) {
@@ -308,6 +308,7 @@ async function analyzeSingleSplit(
 		const clientJourneySchema = z.object({
 			journeys: z.array(vendoJourneySchema),
 		});
+
 		const firstSegment = clientJourneySchema.parse(firstSegmentUntyped);
 		const secondSegment = clientJourneySchema.parse(secondSegmentUntyped);
 
@@ -404,7 +405,7 @@ function findMatchingJourney(
 }
 
 // Streaming handler for real-time progress updates
-async function handleStreamingResponse(
+function handleStreamingResponse(
 	originalJourney: VendoJourney,
 	splitPoints: SplitPoint[],
 	bahnCard: string,

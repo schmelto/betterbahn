@@ -1,6 +1,5 @@
 import { vendoJourneySchema } from "@/utils/schemas";
-import { createClient, type SearchJourneysOptions } from "db-vendo-client";
-import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
+import { createClient } from "db-vendo-client";
 import { profile as dbProfile } from "db-vendo-client/p/db/index";
 import { z } from "zod/v4";
 import {
@@ -9,6 +8,8 @@ import {
 	resetApiCount,
 } from "../../../utils/apiCounter";
 import { apiErrorHandler } from "../_lib/error-handler";
+import { configureSearchOptions } from "./_lib/configure-search-options";
+import { extractUrlParams } from "./_lib/extract-url-params";
 
 const userAgent = "mail@lukasweihrauch.de";
 const client = createClient(dbProfile, userAgent);
@@ -18,20 +19,10 @@ const handler = async (request: Request) => {
 	// API-Zähler für neue Verbindungssuche zurücksetzen
 	resetApiCount();
 
-	// URL-Parameter extrahieren
-	const { searchParams } = new URL(request.url);
-	const from = searchParams.get("from");
-	const to = searchParams.get("to");
-	const departure = searchParams.get("departure");
-	const results = searchParams.get("results") || "10";
-	const bahnCard = searchParams.get("bahnCard");
-	const hasDeutschlandTicket =
-		searchParams.get("hasDeutschlandTicket") === "true";
-	const passengerAge = searchParams.get("passengerAge");
-	const travelClass = searchParams.get("travelClass") || "2";
+	const urlParams = extractUrlParams(request.url);
 
 	// Überprüfe ob Start- und Zielstation angegeben sind
-	if (!from || !to) {
+	if (!urlParams.from || !urlParams.to) {
 		return Response.json(
 			{ error: "Missing required parameters: from and to station IDs" },
 			{ status: 400 }
@@ -39,8 +30,8 @@ const handler = async (request: Request) => {
 	}
 
 	// Validiere dass Abfahrtszeit nicht in der Vergangenheit liegt
-	if (departure) {
-		const departureDate = new Date(departure);
+	if (urlParams.departure) {
+		const departureDate = new Date(urlParams.departure);
 		const now = new Date();
 
 		if (departureDate < now) {
@@ -51,69 +42,28 @@ const handler = async (request: Request) => {
 		}
 	}
 
-	// Suchoptionen konfigurieren
-	const options: SearchJourneysOptions = {
-		results: departure ? 5 : parseInt(results), // Weniger Ergebnisse bei genauer Zeit um Rauschen zu reduzieren
-		stopovers: true,
-		// Bei genauer Abfahrtszeit wollen wir exakte Treffer, nicht verschiedene Alternativen
-		notOnlyFastRoutes: departure ? false : true, // Nur schnelle Routen bei genauer Zeit
-		remarks: true, // Verbindungshinweise einschließen
-		transfers: -1, // System entscheidet über optimale Anzahl Umstiege
-		// Reiseklasse-Präferenz setzen - verwende firstClass boolean Parameter
-		firstClass: parseInt(travelClass) === 1, // true für erste Klasse, false für zweite Klasse
-	};
-
-	// Abfahrtszeit hinzufügen falls angegeben
-	if (departure) {
-		options.departure = new Date(departure);
-	}
-
-	// BahnCard-Rabattkarte hinzufügen falls angegeben
-	if (bahnCard && bahnCard !== "none") {
-		const discount = parseInt(bahnCard);
-		if ([25, 50, 100].includes(discount)) {
-			options.loyaltyCard = {
-				type: loyaltyCards.BAHNCARD,
-				discount: discount,
-				class: parseInt(travelClass), // 1 für erste Klasse, 2 für zweite Klasse
-			};
-		}
-	}
-
-	// Passagieralter für angemessene Preisgestaltung hinzufügen
-	if (passengerAge && !isNaN(parseInt(passengerAge))) {
-		options.age = parseInt(passengerAge);
-	}
-
-	// Deutschland-Ticket Optionen für genauere Preisgestaltung
-	if (hasDeutschlandTicket) {
-		options.deutschlandTicketDiscount = true;
-		// Diese Option kann helfen, genauere Preise zurückzugeben wenn Deutschland-Ticket verfügbar ist
-		options.deutschlandTicketConnectionsOnly = false; // Wir wollen alle Verbindungen, aber mit genauen Preisen
-	}
-
-	console.log("API options being passed to db-vendo-client:", options);
-	console.log("Travel class requested:", travelClass);
-	console.log("BahnCard with class:", options.loyaltyCard);
+	const options = configureSearchOptions(urlParams);
 
 	// API-Zähler für Verbindungssuche erhöhen
 	incrementApiCount(
 		"JOURNEY_SEARCH",
-		`Searching journeys from ${from} to ${to}`
+		`Searching journeys from ${urlParams.from} to ${urlParams.to}`
 	);
 
 	// Verbindungen von DB-API abrufen
-	const journeys = await client.journeys(from, to, options);
+	const journeys = await client.journeys(urlParams.from, urlParams.to, options);
+
 	const parsed = z
 		.object({ journeys: z.array(vendoJourneySchema) })
 		.parse(journeys);
-	let allJourneys = parsed.journeys || [];
+
+	let allJourneys = parsed.journeys;
 
 	console.log(`Received ${allJourneys.length} journeys from main query`);
 
 	// Filter journeys to only show exact matches for the search parameters
-	if (departure && allJourneys.length > 0) {
-		const targetDepartureTime = new Date(departure);
+	if (urlParams.departure && allJourneys.length > 0) {
+		const targetDepartureTime = new Date(urlParams.departure);
 		console.log(
 			`Filtering for exact matches to departure time: ${targetDepartureTime.toISOString()}`
 		);
@@ -128,10 +78,10 @@ const handler = async (request: Request) => {
 			const lastLeg = journey.legs.at(-1)!;
 
 			// Check if start station matches
-			const startStationMatches = firstLeg.origin?.id === from;
+			const startStationMatches = firstLeg.origin?.id === urlParams.from;
 
 			// Check if end station matches
-			const endStationMatches = lastLeg.destination?.id === to;
+			const endStationMatches = lastLeg.destination?.id === urlParams.to;
 
 			// Check if departure time matches (within 1 minute tolerance for exact time matching)
 			const journeyDeparture = new Date(firstLeg.departure);
@@ -234,7 +184,7 @@ const handler = async (request: Request) => {
 		console.log(`Total unique journeys: ${allJourneys.length}`);
 	}
 
-	if (hasDeutschlandTicket) {
+	if (urlParams.hasDeutschlandTicket) {
 		console.log(
 			"Deutschland-Ticket enabled - all journeys should be visible with accurate pricing"
 		);
@@ -250,6 +200,6 @@ const handler = async (request: Request) => {
 	});
 };
 
-export async function GET(request: Request) {
+export function GET(request: Request) {
 	return apiErrorHandler(() => handler(request));
 }

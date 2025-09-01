@@ -49,9 +49,29 @@ const handler = async (request: Request) => {
 	});
 };
 
-export async function POST(request: Request) {
+export function POST(request: Request) {
 	return apiErrorHandler(() => handler(request));
 }
+
+const extractStationName = (paramValue: string | null) => {
+	if (!paramValue) return null;
+	const oMatch = paramValue.match(/@O=([^@]+)/);
+	if (oMatch) {
+		return decodeURIComponent(oMatch[1]).replaceAll(/\+/g, " ").trim();
+	}
+	const parts = paramValue.split("@L=");
+	if (parts.length > 0) {
+		return decodeURIComponent(parts[0]).replaceAll(/\+/g, " ").trim();
+	}
+	return decodeURIComponent(paramValue);
+};
+
+// Helper functions for extraction
+const extractStationId = (paramValue: string | null) => {
+	if (!paramValue) return null;
+	const match = paramValue.match(/@L=(\d+)/);
+	return match ? match[1] : null;
+};
 
 function extractJourneyDetails(url: string) {
 	try {
@@ -67,26 +87,6 @@ function extractJourneyDetails(url: string) {
 			date: null,
 			time: null,
 			class: null,
-		};
-
-		// Helper functions for extraction
-		const extractStationId = (paramValue: string | null) => {
-			if (!paramValue) return null;
-			const match = paramValue.match(/@L=(\d+)/);
-			return match ? match[1] : null;
-		};
-
-		const extractStationName = (paramValue: string | null) => {
-			if (!paramValue) return null;
-			const oMatch = paramValue.match(/@O=([^@]+)/);
-			if (oMatch) {
-				return decodeURIComponent(oMatch[1]).replace(/\+/g, " ").trim();
-			}
-			const parts = paramValue.split("@L=");
-			if (parts.length > 0) {
-				return decodeURIComponent(parts[0]).replace(/\+/g, " ").trim();
-			}
-			return decodeURIComponent(paramValue);
 		};
 
 		// Extract from hash
@@ -127,7 +127,7 @@ function extractJourneyDetails(url: string) {
 			}
 
 			if (classMatch) {
-				details.class = parseInt(classMatch[1]);
+				details.class = parseInt(classMatch[1], 10);
 			}
 
 			// Legacy fallbacks
@@ -155,7 +155,7 @@ function extractJourneyDetails(url: string) {
 		if (searchParams.has("hd")) details.date = searchParams.get("hd");
 		if (searchParams.has("ht")) details.time = searchParams.get("ht");
 		if (searchParams.has("kl"))
-			details.class = parseInt(searchParams.get("kl")!);
+			details.class = parseInt(searchParams.get("kl")!, 10);
 		if (searchParams.has("so") && !details.fromStation)
 			details.fromStation = searchParams.get("so");
 		if (searchParams.has("zo") && !details.toStation)

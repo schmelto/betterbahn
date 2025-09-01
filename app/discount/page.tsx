@@ -64,13 +64,13 @@ const getChangesCount = (journey: VendoJourney) => {
 };
 
 const formatPriceWithTwoDecimals = (price: VendoPrice | number) => {
-    let amount;
+	let amount;
 
-    if (price && typeof price === "object") {
-        amount = (price.amount);
-    } else {
-        amount = (price);
-    }
+	if (price && typeof price === "object") {
+		amount = price.amount;
+	} else {
+		amount = price;
+	}
 
 	if (isNaN(amount)) {
 		return null;
@@ -183,14 +183,14 @@ function OriginalJourneyCard({
 			isLegCoveredByDeutschlandTicket(leg, hasDeutschlandTicket)
 		);
 
-				/**
-				 * TODO formatPriceWithTwoDecimals doesn't handle undefined values,
-				 * but the property on journey (VendoJourney) may not be present.
-				 * this is either an oversight in the implementation or the schema / type defs i wrote.
-				 */
+	/**
+	 * TODO formatPriceWithTwoDecimals doesn't handle undefined values,
+	 * but the property on journey (VendoJourney) may not be present.
+	 * this is either an oversight in the implementation or the schema / type defs i wrote.
+	 */
 
-    const formattedPrice = formatPriceWithTwoDecimals(selectedJourney.price);
-    let priceDisplay;
+	const formattedPrice = formatPriceWithTwoDecimals(selectedJourney.price);
+	let priceDisplay;
 
 	if (formattedPrice !== null) {
 		priceDisplay = formattedPrice;
@@ -232,7 +232,7 @@ function OriginalJourneyCard({
 							<span className="">·</span>
 							<span>
 								{getChangesCount(selectedJourney)} Zwischenstopp
-								{getChangesCount(selectedJourney) !== 1 ? "s" : ""}
+								{getChangesCount(selectedJourney) === 1 ? "" : "s"}
 							</span>
 							<span className="ml-2 inline-block px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-400 rounded-sm">
 								DB
@@ -412,7 +412,7 @@ function Discount() {
 	const [selectedJourney, setSelectedJourney] = useState<VendoJourney | null>(
 		null
 	);
-	const [splitOptions, setSplitOptions] = useState<SplitOption[]|null>(null);
+	const [splitOptions, setSplitOptions] = useState<SplitOption[] | null>(null);
 	const [loadingMessage, setLoadingMessage] = useState(
 		LOADING_MESSAGES.initial
 	);
@@ -434,7 +434,7 @@ function Discount() {
 						bahnCard: journeyData?.bahnCard || "none",
 						hasDeutschlandTicket: journeyData?.hasDeutschlandTicket || false,
 						passengerAge: journeyData?.passengerAge?.trim()
-							? parseInt(journeyData.passengerAge.trim())
+							? parseInt(journeyData.passengerAge.trim(), 10)
 							: null,
 						travelClass: journeyData?.travelClass || "2",
 						useStreaming: true, // Enable streaming for progress updates
