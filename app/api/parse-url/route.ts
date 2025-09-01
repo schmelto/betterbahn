@@ -43,9 +43,44 @@ const handler = async (request: Request) => {
 	});
 };
 
-export async function POST(request: Request) {
+export function POST(request: Request) {
 	return apiErrorHandler(() => handler(request));
 }
+
+const extractStationName = (value: string | null) => {
+	if (!value) {
+		return null;
+	}
+
+	const oMatch = value.match(/@O=([^@]+)/);
+
+	if (oMatch) {
+		return decodeURIComponent(oMatch[1]).replace(/\+/g, " ").trim();
+	}
+
+	const parts = value.split("@L=");
+	return parts.length > 0
+		? decodeURIComponent(parts[0]).replace(/\+/g, " ").trim()
+		: decodeURIComponent(value);
+};
+
+const extractStationId = (value: string | null) =>
+	value?.match(/@L=(\d+)/)?.[1] || null;
+
+const parseDateTime = (value: string | null) => {
+	if (!value) {
+		return {};
+	}
+
+	if (value.includes("T")) {
+		const [datePart, timePart] = value.split("T");
+		const timeOnly = timePart.split("+")[0].split("-")[0];
+		const [hours, minutes] = timeOnly.split(":");
+		return { date: datePart, time: `${hours}:${minutes}` };
+	}
+
+	return { date: value };
+};
 
 function extractJourneyDetails(url: string) {
 	try {
@@ -65,32 +100,6 @@ function extractJourneyDetails(url: string) {
 
 		// Extract data from hash first (priority), then from search params as fallback
 		const params = new URLSearchParams(hash.replace("#", ""));
-
-		// Helper functions
-		const extractStationId = (value: string | null) =>
-			value?.match(/@L=(\d+)/)?.[1] || null;
-
-		const extractStationName = (value: string | null) => {
-			if (!value) return null;
-			const oMatch = value.match(/@O=([^@]+)/);
-			if (oMatch)
-				return decodeURIComponent(oMatch[1]).replace(/\+/g, " ").trim();
-			const parts = value.split("@L=");
-			return parts.length > 0
-				? decodeURIComponent(parts[0]).replace(/\+/g, " ").trim()
-				: decodeURIComponent(value);
-		};
-
-		const parseDateTime = (value: string | null) => {
-			if (!value) return {};
-			if (value.includes("T")) {
-				const [datePart, timePart] = value.split("T");
-				const timeOnly = timePart.split("+")[0].split("-")[0];
-				const [hours, minutes] = timeOnly.split(":");
-				return { date: datePart, time: `${hours}:${minutes}` };
-			}
-			return { date: value };
-		};
 
 		// Extract from hash parameters
 		const soidValue = params.get("soid");

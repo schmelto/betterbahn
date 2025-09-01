@@ -12,7 +12,7 @@ export const SearchForm = () => {
 	const [urlParseError, setUrlParseError] = useState<string | null>(null);
 	const { formData, updateFormData } = useSearchFormData();
 
-	const handleUrlParsingAndNavigation = async () => {
+	const handleUrlParsingAndNavigation = () => {
 		if (!url.trim()) {
 			setUrlParseError(
 				"Please enter text containing a DB booking URL or paste a direct DB booking link"

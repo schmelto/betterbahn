@@ -172,7 +172,7 @@ export const SplitOptions = ({
 											<span className="mx-2">·</span>
 											<span>
 												{totalChanges} Zwischenstopp
-												{totalChanges !== 1 ? "s" : ""}
+												{totalChanges === 1 ? "" : "s"}
 											</span>
 											<span className="ml-2 inline-block px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-400 rounded-sm">
 												DB
