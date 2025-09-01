@@ -177,9 +177,6 @@ function extractJourneyDetails(url: string) {
 			}
 		});
 
-		// Normalize class (default to 2)
-		details.class = details.class === 1 ? 1 : 2;
-
 		return details;
 	} catch (error) {
 		console.error("❌ Error extracting journey details:", error);

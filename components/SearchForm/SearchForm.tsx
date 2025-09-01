@@ -78,6 +78,18 @@ export const SearchForm = () => {
 						<option value="true">Deutschlandticket</option>
 						<option value="false">Kein Deutschlandticket</option>
 					</select>
+					<select
+						value={String(formData.travelClass)}
+						onChange={(e) =>
+							updateFormData({
+								travelClass: e.target.value,
+							})
+						}
+						className="w-full px-3 py-2 resize-vertical border-b-2 border-gray-300 focus:ring-2 focus:ring-primary"
+					>
+						<option value="1">Erste Klasse</option>
+						<option value="2">Zweite Klasse</option>
+					</select>
 				</div>
 
 				<button
