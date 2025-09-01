@@ -42,8 +42,8 @@ const stopoverSchema = z.object({
 	loadFactor: z.unknown()
 })
 
-// TODO maybe departure and arrivel only exist if duration also exists?
-
+// TODO maybe departure and arrival only exist if duration also exists?
+// TODO recheck departurePlatform and arrivalPlatform
 const vendoLegSchema = z.object({
 	origin: originOrDestinationSchema,
 	destination: originOrDestinationSchema,
@@ -53,8 +53,8 @@ const vendoLegSchema = z.object({
 	mode: z.string().optional(),
 	duration: z.unknown(),
 	walking: z.unknown(),
-	departurePlatform: z.string().optional(),
-	arrivalPlatform: z.string().optional(),
+	departurePlatform: z.string().nullable().optional(),
+	arrivalPlatform: z.string().nullable().optional(),
 	delay: z.number().optional(),
 	cancelled: z.boolean().optional(),
 	stopovers: z.array(stopoverSchema).optional(),
