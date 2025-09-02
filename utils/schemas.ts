@@ -5,7 +5,7 @@ const vendoStationSchema = z.object({
 	name: z.string().optional(),
 });
 
-export type VendoStation = z.infer<typeof vendoStationSchema>
+export type VendoStation = z.infer<typeof vendoStationSchema>;
 
 const vendoStopSchema = z.object({
 	id: z.string(),
@@ -17,9 +17,12 @@ const vendoLocationSchema = z.object({
 	name: z.string().optional(),
 });
 
-const vendoPriceSchema = z.object({ amount: z.number(), hint: z.string().nullable().optional() });
+const vendoPriceSchema = z.object({
+	amount: z.number(),
+	hint: z.string().nullable().optional(),
+});
 
-export type VendoPrice = z.infer<typeof vendoPriceSchema>
+export type VendoPrice = z.infer<typeof vendoPriceSchema>;
 
 const vendoLineSchema = z.object({
 	name: z.string(),
@@ -33,14 +36,16 @@ const originOrDestinationSchema = vendoStationSchema
 	.or(vendoLocationSchema)
 	.optional();
 
-export type VendoOriginOrDestination = z.infer<typeof originOrDestinationSchema>
+export type VendoOriginOrDestination = z.infer<
+	typeof originOrDestinationSchema
+>;
 
 const stopoverSchema = z.object({
 	arrival: z.unknown().optional(),
 	departure: z.unknown().optional(),
 	stop: vendoStopSchema.optional(),
-	loadFactor: z.unknown()
-})
+	loadFactor: z.unknown(),
+});
 
 // TODO maybe departure and arrival only exist if duration also exists?
 // TODO recheck departurePlatform and arrivalPlatform
@@ -69,3 +74,10 @@ export const vendoJourneySchema = z.object({
 });
 
 export type VendoJourney = z.infer<typeof vendoJourneySchema>;
+
+export const vbidSchema = z.object({
+	hinfahrtRecon: z.string(),
+	hinfahrtDatum: z.string(),
+});
+
+export type VbidSchema = z.infer<typeof vbidSchema>;

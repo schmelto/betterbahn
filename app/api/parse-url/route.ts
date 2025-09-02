@@ -1,6 +1,7 @@
+import { fetchAndValidateJson } from "@/utils/fetchAndValidateJson";
 import { parseHinfahrtReconWithAPI } from "@/utils/parseHinfahrtRecon";
+import { vbidSchema } from "@/utils/schemas";
 import type { ExtractedData } from "@/utils/types";
-import { z } from "zod/v4";
 import { apiErrorHandler } from "../_lib/error-handler";
 
 // POST-Route für URL-Parsing
@@ -15,15 +16,9 @@ const handler = async (request: Request) => {
 		);
 	}
 
-	// Try to resolve URL, fallback to original on failure
-	let finalUrl = url;
-	try {
-		finalUrl = await getResolvedUrlBrowserless(url);
-	} catch {
-		console.log("Resolving URL failed, trying to parse original URL directly");
-	}
-
-	const journeyDetails = extractJourneyDetails(finalUrl);
+	const journeyDetails = extractJourneyDetails(
+		await getResolvedUrlBrowserless(url)
+	);
 
 	if ("error" in journeyDetails) {
 		return Response.json({ error: journeyDetails.error });
@@ -210,58 +205,34 @@ function displayJourneyInfo(journeyDetails: ExtractedData) {
 
 async function getResolvedUrlBrowserless(url: string) {
 	const vbid = new URL(url).searchParams.get("vbid");
+
 	if (!vbid) {
 		throw new Error("No vbid parameter found in URL");
 	}
 
-	const response = await fetch(
-		`https://www.bahn.de/web/api/angebote/verbindung/${vbid}`
-	);
+	const vbidRequest = await fetchAndValidateJson({
+		url: `https://www.bahn.de/web/api/angebote/verbindung/${vbid}`,
+		schema: vbidSchema,
+	});
 
-	if (!response.ok) {
-		throw new Error(`Failed to fetch journey data: ${response.status} ${response.statusText}`);
-	}
-
-	const json = await response.json();
-
-	const parsed = z
-		.object({
-			hinfahrtRecon: z.string(),
-			hinfahrtDatum: z.string(),
-		})
-		.parse(json);
-
-	const data = await parseHinfahrtReconWithAPI(
-		parsed.hinfahrtRecon,
-		parsed.hinfahrtDatum
-	);
-
-	const firstConnection = data.verbindungen.at(0);
-	if (!firstConnection) {
-		throw new Error("No connections found in recon response");
-	}
-
-	const firstSection = firstConnection.verbindungsAbschnitte.at(0);
-	const lastSection = firstConnection.verbindungsAbschnitte.at(-1);
-
-	if (!firstSection || !lastSection) {
-		throw new Error("No connection sections found");
-	}
-
-	const soid = firstSection.halte.at(0)?.id;
-	const zoid = lastSection.halte.at(-1)?.id;
-
-	if (!soid || !zoid) {
-		throw new Error("Could not find soid or zoid in recon response");
-	}
+	const cookies = vbidRequest.response.headers.getSetCookie();
+	const { data } = await parseHinfahrtReconWithAPI(vbidRequest.data, cookies);
 
 	const newUrl = new URL("https://www.bahn.de/buchung/fahrplan/suche");
-	newUrl.searchParams.set("soid", soid);
-	newUrl.searchParams.set("zoid", zoid);
+
+	newUrl.searchParams.set(
+		"soid",
+		data.verbindungen[0].verbindungsAbschnitte.at(0)!.halte.at(0)!.id
+	);
+
+	newUrl.searchParams.set(
+		"zoid",
+		data.verbindungen[0].verbindungsAbschnitte.at(-1)!.halte.at(-1)!.id
+	);
 
 	// Add date information from the booking
-	if (parsed.hinfahrtDatum) {
-		newUrl.searchParams.set("hd", parsed.hinfahrtDatum);
+	if (vbidRequest.data.hinfahrtDatum) {
+		newUrl.searchParams.set("hd", vbidRequest.data.hinfahrtDatum);
 	}
 
 	return newUrl.toString();

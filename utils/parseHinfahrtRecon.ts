@@ -1,5 +1,7 @@
 import zlib from "node:zlib";
 import { z } from "zod/v4";
+import type { VbidSchema } from "./schemas";
+import { fetchAndValidateJson } from "./fetchAndValidateJson";
 
 export const parseHinfahrtRecon = (hinfahrtRecon: string) => {
 	/**
@@ -85,31 +87,38 @@ export const parseHinfahrtRecon = (hinfahrtRecon: string) => {
 };
 
 const reconLegSchema = z.object({
-	halte: z.array(
-		z.object({
-			id: z.string(),
-		})
-	),
+	halte: z
+		.array(
+			z.object({
+				id: z.string(),
+			})
+		)
+		.min(1),
 });
 
 const reconResponseSchema = z.object({
-	verbindungen: z.array(
-		z.object({
-			verbindungsAbschnitte: z.array(reconLegSchema),
-		})
-	),
+	verbindungen: z
+		.array(
+			z.object({
+				verbindungsAbschnitte: z.array(reconLegSchema).min(1),
+			})
+		)
+		.min(1),
 });
 
 export const parseHinfahrtReconWithAPI = async (
-	ctxRecon: string,
-	anfrageZeitpunkt: string
+	vbidResponse: VbidSchema,
+	cookies: string[]
 ) => {
-	const response = await fetch("https://www.bahn.de/web/api/angebote/recon", {
+	return await fetchAndValidateJson({
+		url: "https://www.bahn.de/web/api/angebote/recon",
+		schema: reconResponseSchema,
 		method: "POST",
 		headers: {
 			"content-type": "application/json",
+			cookies: cookies.join(" "),
 		},
-		body: JSON.stringify({
+		body: {
 			klasse: "KLASSE_2",
 			reisende: [
 				{
@@ -124,14 +133,12 @@ export const parseHinfahrtReconWithAPI = async (
 					alter: [],
 				},
 			],
-			anfrageZeitpunkt,
-			ctxRecon,
+			anfrageZeitpunkt: vbidResponse.hinfahrtDatum,
+			ctxRecon: vbidResponse.hinfahrtRecon,
 			reservierungsKontingenteVorhanden: false,
 			nurDeutschlandTicketVerbindungen: false,
 			deutschlandTicketVorhanden: false,
 			sitzplatzOnly: false,
-		}),
+		},
 	});
-
-	return reconResponseSchema.parse(await response.json());
 };
