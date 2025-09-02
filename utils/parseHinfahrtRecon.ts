@@ -115,8 +115,8 @@ export const parseHinfahrtReconWithAPI = async (
 		schema: reconResponseSchema,
 		method: "POST",
 		headers: {
-			"content-type": "application/json",
-			cookies: cookies.join(" "),
+			"Content-Type": "application/json",
+			"Cookie": cookies.join(" "),
 		},
 		body: {
 			klasse: "KLASSE_2",
