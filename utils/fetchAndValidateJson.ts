@@ -18,7 +18,11 @@ export const fetchAndValidateJson = async <
 }) => {
 	const init: RequestInit = {
 		method: method ?? "GET",
-		headers,
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+			...headers,
+		},
 	};
 
 	if (method !== "GET") {

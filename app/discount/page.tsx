@@ -2,6 +2,7 @@
 import { JourneyResults } from "@/components/JourneyResults";
 import { SplitOptions } from "@/components/SplitOptions/SplitOptions";
 import { isLegCoveredByDeutschlandTicket } from "@/utils/deutschlandTicketUtils";
+import { fetchAndValidateJson } from "@/utils/fetchAndValidateJson";
 import { searchForJourneys } from "@/utils/journeyUtils";
 import type { VendoJourney, VendoPrice } from "@/utils/schemas";
 import type { ExtractedData, ProgressInfo, SplitOption } from "@/utils/types";
@@ -13,6 +14,7 @@ import {
 	useState,
 	type ReactNode,
 } from "react";
+import { z } from "zod/v4";
 
 // Konstanten für Lademeldungen
 const LOADING_MESSAGES = {
@@ -390,9 +392,7 @@ function ErrorDisplay({ error }: { error: string }) {
 				<div className="text-red-500 mr-3">⚠️</div>
 				<div>
 					<strong>Fehler:</strong> {error}
-					<p className="mt-2 text-sm">
-						Bitte versuche es erneut.
-					</p>
+					<p className="mt-2 text-sm">Bitte versuche es erneut.</p>
 				</div>
 			</div>
 		</div>
@@ -463,7 +463,7 @@ function Discount() {
 							try {
 								const jsonData = line.slice(6).trim();
 								if (!jsonData) continue; // Skip empty data lines
-								
+
 								const data = JSON.parse(jsonData);
 
 								if (data.type === "progress") {
@@ -481,7 +481,12 @@ function Discount() {
 									throw new Error(data.error);
 								}
 							} catch (parseError) {
-								console.error("Error parsing SSE data:", parseError, "Line:", line);
+								console.error(
+									"Error parsing SSE data:",
+									parseError,
+									"Line:",
+									line
+								);
 								// Continue processing other lines instead of failing completely
 							}
 						}
@@ -526,18 +531,27 @@ function Discount() {
 
 				// Parse URL
 				setLoadingMessage(LOADING_MESSAGES.parsing);
-				const parseResponse = await fetch("/api/parse-url", {
+
+				// yes, the following is some ugly and probably redundant client-side validation, but imo this will help us progressively narrow down certain bugs
+				const parseUrlRequest = await fetchAndValidateJson({
+					url: "/api/parse-url",
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ url: urlFromParams }),
+					body: { url: urlFromParams },
+					schema: z.object({
+						success: z.literal(true),
+						journeyDetails: z.object({
+							fromStation: z.string().nullable().optional(),
+							toStation: z.string().nullable().optional(),
+							fromStationId: z.string().nullable().optional(),
+							toStationId: z.string().nullable().optional(),
+							date: z.unknown().optional(),
+							time: z.string().nullable().optional(),
+							class: z.number().nullable().optional(),
+						}),
+					}),
 				});
 
-				const parseData = await parseResponse.json();
-				if (!parseResponse.ok) {
-					throw new Error(parseData.error || "Failed to parse URL");
-				}
-
-				const { journeyDetails } = parseData;
+				const { journeyDetails } = parseUrlRequest.data;
 
 				const journeyData = {
 					fromStation: journeyDetails.fromStation,

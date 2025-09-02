@@ -25,9 +25,10 @@ const handler = async (request: Request) => {
 	}
 
 	if (!journeyDetails.fromStationId || !journeyDetails.toStationId) {
-		return Response.json({
-			error: "journeyDetails is missing fromStationId or toStationId",
-		});
+		return Response.json(
+			{ error: "journeyDetails is missing fromStationId or toStationId" },
+			{ status: 500 }
+		);
 	}
 
 	displayJourneyInfo(journeyDetails);
