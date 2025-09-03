@@ -1,18 +1,19 @@
 name: CI
 on:
-- push
-- pull_request
-- workflow_dispatch # temporarily, for testing the workflow
+  - push
+  - pull_request
+  - workflow_dispatch # temporarily, for testing the workflow
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v4
-    - uses: pnpm/action-setup@v4
-    - name: Install modules
-      run: pnpm install
-    - name: Run Typecheck
-      run: pnpm tsc
-    - name: Run Oxlint
-      run: pnpm oxlint
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
+      - name: Install modules
+        run: pnpm install
+      - name: Run Typecheck
+        run: pnpm tsc
+      - name: Run Oxlint
+        run: pnpm run oxlint
+      - run: pnpm run build
