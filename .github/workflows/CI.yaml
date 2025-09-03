@@ -2,7 +2,6 @@ name: CI
 on:
   - push
   - pull_request
-  - workflow_dispatch # temporarily, for testing the workflow
 jobs:
   build:
     runs-on: ubuntu-latest
