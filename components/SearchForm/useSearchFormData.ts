@@ -16,7 +16,7 @@ export interface FormState {
 	time: string;
 	bahnCard: string;
 	hasDeutschlandTicket: boolean;
-	passengerAge: string | number;
+	passengerAge: string;
 	travelClass: string;
 }
 
@@ -51,14 +51,15 @@ const loadSettingsFromLocalStorage = () => {
 	}
 
 	if (storageAge !== null) {
-		updates.passengerAge = parseInt(storageAge, 10);
+		const parsedAge = parseInt(storageAge, 10);
+		updates.passengerAge = isNaN(parsedAge) ? "" : String(parsedAge);
 	}
 
 	if (storageDTicket !== null) {
 		updates.hasDeutschlandTicket = storageDTicket === "true";
 	}
 
-	if (storageTravelClass != null) {
+	if (storageTravelClass !== null) {
 		updates.travelClass = storageTravelClass;
 	}
 
@@ -78,10 +79,10 @@ const updateLocalStorage = (updates: Updates) => {
 	if (updates.passengerAge !== null) {
 		localStorage.setItem(
 			"betterbahn/settings/passengerAge",
-			updates.passengerAge
+			String(updates.passengerAge || '')
 		);
 	}
-	if(updates.travelClass != null) {
+	if(updates.travelClass !== undefined) {
 		localStorage.setItem(
 			"betterbahn/settings/travelClass",
 			updates.travelClass

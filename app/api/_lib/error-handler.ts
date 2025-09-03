@@ -1,17 +1,27 @@
-export const apiErrorHandler = (routeHandler: () => Promise<Response>) => {
+function safeStringifyError(error: unknown): string {
+	if (error instanceof Error) {
+		return JSON.stringify({
+			name: error.name,
+			message: error.message,
+			stack: error.stack
+		});
+	}
+	
 	try {
-		return routeHandler();
-	} catch (error) {
-		if (typeof error === "object" && error !== null && "message" in error) {
-			return Response.json({
-				status: 500,
-				error: error.message,
-			});
-		}
+		return JSON.stringify(error);
+	} catch {
+		return String(error);
+	}
+}
 
+export const apiErrorHandler = async (routeHandler: () => Promise<Response>) => {
+	try {
+		return await routeHandler();
+	} catch (error) {
+		console.error('API Error:', safeStringifyError(error));
+		
 		return Response.json({
-			status: 500,
-			error: JSON.stringify(error)
-		})
+			error: safeStringifyError(error),
+		}, { status: 500 });
 	}
 };

@@ -36,6 +36,11 @@ const originOrDestinationSchema = vendoStationSchema
 	.or(vendoLocationSchema)
 	.optional();
 
+// Required origin/destination for journey validation
+const requiredOriginOrDestinationSchema = vendoStationSchema
+	.or(vendoStopSchema)
+	.or(vendoLocationSchema);
+
 export type VendoOriginOrDestination = z.infer<
 	typeof originOrDestinationSchema
 >;
@@ -47,8 +52,6 @@ const stopoverSchema = z.object({
 	loadFactor: z.unknown(),
 });
 
-// TODO maybe departure and arrival only exist if duration also exists?
-// TODO recheck departurePlatform and arrivalPlatform
 const vendoLegSchema = z.object({
 	origin: originOrDestinationSchema,
 	destination: originOrDestinationSchema,
@@ -73,7 +76,31 @@ export const vendoJourneySchema = z.object({
 	duration: z.unknown().optional(),
 });
 
+// Schema for journeys that require valid origin/destination IDs
+const validatedVendoLegSchema = z.object({
+	origin: requiredOriginOrDestinationSchema,
+	destination: requiredOriginOrDestinationSchema,
+	departure: z.string(),
+	line: vendoLineSchema.optional(),
+	arrival: z.string(),
+	mode: z.string().optional(),
+	duration: z.unknown(),
+	walking: z.unknown(),
+	departurePlatform: z.string().nullable().optional(),
+	arrivalPlatform: z.string().nullable().optional(),
+	delay: z.number().optional(),
+	cancelled: z.boolean().optional(),
+	stopovers: z.array(stopoverSchema).optional(),
+});
+
+export const validatedVendoJourneySchema = z.object({
+	legs: z.array(validatedVendoLegSchema).min(1),
+	price: vendoPriceSchema.optional(),
+	duration: z.unknown().optional(),
+});
+
 export type VendoJourney = z.infer<typeof vendoJourneySchema>;
+export type ValidatedVendoJourney = z.infer<typeof validatedVendoJourneySchema>;
 
 export const vbidSchema = z.object({
 	hinfahrtRecon: z.string(),

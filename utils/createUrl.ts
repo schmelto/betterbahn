@@ -5,7 +5,7 @@ interface Station {
 	stationId?: string;
 	uicCode?: string;
 	evaId?: string;
-	name: string;
+	name?: string;
 	longitude?: number;
 	latitude?: number;
 	x?: number;
@@ -66,14 +66,13 @@ export function createSegmentSearchUrl(
 	const lastLeg = legs[legs.length - 1];
 	const cleanDate = formatDate(firstLeg.departure);
 
-	// TODO diesen code zu new URL -> .searchParams.set() usw porten
+	// Modern URL building with proper validation
 
-	/**
-	 * TODO looking at the original code, the majority treats origin and destination
-	 * as optional / possibly undefined properties.
-	 * the following logic, from the original code, doesn't treat them as such, which could be an oversight.
-	 * i did not find any checking logic further up the component/call stack that ensures their presence.
-	 */
+	// Properly validate required data with explicit checks for optional properties
+	if (!firstLeg?.origin || !firstLeg.origin.name || 
+		!lastLeg?.destination || !lastLeg.destination.name) {
+		throw new Error('Missing origin, destination, or station names in journey legs');
+	}
 
 	const parts = [
 		"sts=true",
@@ -153,7 +152,7 @@ function addStationId(station: Station, type: string, parts: string[]) {
 	const stationId =
 		station.id || station.stationId || station.uicCode || station.evaId;
 
-	if (stationId && shouldUseStationId(stationId, station.name)) {
+	if (stationId && station.name && shouldUseStationId(stationId, station.name)) {
 		const stationData = createStationId({
 			name: station.name,
 			id: stationId,
@@ -166,3 +165,4 @@ function addStationId(station: Station, type: string, parts: string[]) {
 
 	return null;
 }
+

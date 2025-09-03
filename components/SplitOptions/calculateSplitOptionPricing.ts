@@ -51,10 +51,10 @@ export const calculateSplitOptionPricing = ({
 		return trainLegs.some((leg) => legIsFlixTrain(leg));
 	});
 
-	let cannotShowPrice = false;
-	let hasPartialPricing = false;
+	let cannotShowPrice: boolean;
+	let hasPartialPricing: boolean;
 	let segmentsWithoutPricing: number[] = [];
-	let allSegmentsCovered = false;
+	let allSegmentsCovered: boolean;
 
 	allSegmentsCovered = splitOption.segments.every((segment) => {
 		const trainLegs = getJourneyLegsWithTransfers(segment);
@@ -108,7 +108,7 @@ export const calculateSplitOptionPricing = ({
 				);
 				const segmentPrice = segment.price?.amount || 0;
 
-				if (!segmentCovered && segmentPrice != null && segmentPrice > 0) {
+				if (!segmentCovered && segmentPrice > 0) {
 					totalUncoveredPrice += segmentPrice;
 				}
 			}

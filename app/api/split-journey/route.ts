@@ -1,4 +1,4 @@
-import { vendoJourneySchema, type VendoJourney } from "@/utils/schemas";
+import { vendoJourneySchema, validatedVendoJourneySchema, type VendoJourney } from "@/utils/schemas";
 import type { ProgressInfo, SplitPoint, TrainLine } from "@/utils/types.js";
 import { createClient } from "db-vendo-client";
 import { data as loyaltyCards } from "db-vendo-client/format/loyalty-cards";
@@ -26,9 +26,14 @@ const handler = async (request: Request) => {
 		useStreaming,
 	} = await request.json();
 
-	// Validiere, dass originalJourney vorhanden ist
-	if (!originalJourney?.legs) {
-		return Response.json({ error: "Missing originalJourney" }, { status: 400 });
+	// Validate originalJourney with schema
+	try {
+		validatedVendoJourneySchema.parse(originalJourney);
+	} catch (error) {
+		return Response.json({ 
+			error: "Invalid originalJourney: missing required station IDs or journey structure",
+			details: error instanceof z.ZodError ? error.issues : undefined
+		}, { status: 400 });
 	}
 
 	// Split-Kandidaten aus vorhandenen Legs ableiten (keine zusätzlichen API Calls)
@@ -84,8 +89,8 @@ const handler = async (request: Request) => {
 	});
 };
 
-export function POST(request: Request) {
-	return apiErrorHandler(() => handler(request));
+export async function POST(request: Request) {
+	return await apiErrorHandler(() => handler(request));
 }
 
 interface QueryOptions {
@@ -93,6 +98,9 @@ interface QueryOptions {
 	results: number;
 	stopovers: boolean;
 	firstClass: boolean;
+	notOnlyFastRoutes: boolean;
+	remarks: boolean;
+	transfers: number;
 	loyaltyCard?: {
 		type: string;
 		discount: number;
@@ -117,6 +125,9 @@ function buildQueryOptions({
 		results: 1,
 		stopovers: true,
 		firstClass: parseInt(travelClass || "2", 10) === 1,
+		notOnlyFastRoutes: true,
+		remarks: true,
+		transfers: 3,
 	};
 
 	const discount = parseInt(bahnCard, 10);
@@ -158,11 +169,16 @@ function extractSplitPoints(journey: VendoJourney) {
 			}
 
 			if (s.arrival && s.departure && s.stop && !map.has(s.stop.id)) {
+				const trainLine: TrainLine | undefined = typeof leg.line === 'object' ? {
+					name: leg.line.name,
+					product: leg.line.product || leg.line.productName,
+				} : undefined;
+
 				map.set(s.stop.id, {
-					station: { id: s.stop.id, name: s.stop.name },
-					arrival: s.arrival,
-					departure: s.departure,
-					trainLine: leg.line,
+					station: { id: s.stop.id, name: s.stop.name || '' },
+					arrival: typeof s.arrival === 'string' ? s.arrival : '',
+					departure: typeof s.departure === 'string' ? s.departure : '',
+					trainLine,
 					loadFactor: s.loadFactor,
 					legIndex,
 					stopIndex,
@@ -291,15 +307,16 @@ async function analyzeSingleSplit(
 			`${splitPoint.station?.name} → ${destination?.name}`
 		);
 
+		// Schema validation at entry point ensures origin/destination IDs exist
+
 		// Make both API calls in parallel using Promise.all
 		const [firstSegmentUntyped, secondSegmentUntyped] = await Promise.all([
-			/** TODO origin and destination can be undefined, there's probably a check (type-gate) with error handling missing here */
-			client.journeys(origin?.id, splitPoint.station.id, {
+			client.journeys(origin!.id, splitPoint.station.id, {
 				...queryOptions,
 				departure: originalDeparture,
 			}),
 
-			client.journeys(splitPoint.station.id, destination?.id, {
+			client.journeys(splitPoint.station.id, destination!.id, {
 				...queryOptions,
 				departure: splitDeparture,
 			}),
