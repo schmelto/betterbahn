@@ -40,6 +40,15 @@ You can run the app with docker compose:
 
 http://localhost:3000
 
+## Installation Guides
+
+For detailed installation instructions on different platforms:
+
+- [Windows Installation (DE)](docs/Windows-Installation-de.md)
+- [Linux Installation (DE)](docs/Linux-Installation-de.md)
+- [Windows Installation (EN)](docs/Windows-Installation-en.md)
+- [Linux Installation (EN)](docs/Linux-Installation-en.md)
+
 ## License
 
 This project is licensed under the AGPL-3.0-only. See the [LICENSE](./LICENSE) file for details.
