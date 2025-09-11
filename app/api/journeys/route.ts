@@ -1,7 +1,7 @@
 import { vendoJourneySchema } from "@/utils/schemas";
 import { createClient } from "db-vendo-client";
 import { profile as dbProfile } from "db-vendo-client/p/db/index";
-import { z } from "zod/v4";
+import { prettifyError, z } from "zod/v4";
 import {
 	getApiCount,
 	incrementApiCount,
@@ -53,11 +53,25 @@ const handler = async (request: Request) => {
 	// Verbindungen von DB-API abrufen
 	const journeys = await client.journeys(urlParams.from, urlParams.to, options);
 
-	const parsed = z
+	const parseResult = z
 		.object({ journeys: z.array(vendoJourneySchema) })
-		.parse(journeys);
+		.safeParse(journeys);
 
-	let allJourneys = parsed.journeys;
+	if (!parseResult.success) {
+		return Response.json(
+			{
+				success: false,
+				error: `Validation of 'journeys' on DB-API failed: ${prettifyError(
+					parseResult.error
+				)}`,
+			},
+			{
+				status: 500,
+			}
+		);
+	}
+
+	let allJourneys = parseResult.data.journeys;
 
 	console.log(`Received ${allJourneys.length} journeys from main query`);
 
