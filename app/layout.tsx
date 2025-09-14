@@ -1,4 +1,3 @@
-import { Footer } from "@/components/Layout/Footer";
 import { Navbar } from "@/components/Layout/Navbar";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
@@ -27,7 +26,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 			>
 				<Navbar />
 				{children}
-				<Footer />
 			</body>
 		</html>
 	);
