@@ -95,7 +95,7 @@ function extractJourneyDetails(url: string) {
 
 		// Extract from hash parameters (consistent approach)
 		const params = new URLSearchParams(hash.replace("#", ""));
-		
+
 		const soidValue = params.get("soid");
 		const zoidValue = params.get("zoid");
 		const dateValue = params.get("hd");
@@ -170,8 +170,22 @@ async function getResolvedUrlBrowserless(url: string) {
 
 	// Use hash parameters for consistency with DB URLs
 	const hashParams = new URLSearchParams();
-	hashParams.set("soid", data.verbindungen[0].verbindungsAbschnitte.at(0)!.halte.at(0)!.id);
-	hashParams.set("zoid", data.verbindungen[0].verbindungsAbschnitte.at(-1)!.halte.at(-1)!.id);
+
+	// Find first segment with halte data for start station
+	const firstSegmentWithHalte = data.verbindungen[0].verbindungsAbschnitte.find(
+		(segment) => segment.halte.length > 0
+	);
+	const lastSegmentWithHalte =
+		data.verbindungen[0].verbindungsAbschnitte.findLast(
+			(segment) => segment.halte.length > 0
+		);
+
+	if (!firstSegmentWithHalte || !lastSegmentWithHalte) {
+		throw new Error("No segments with station data found");
+	}
+
+	hashParams.set("soid", firstSegmentWithHalte.halte[0].id);
+	hashParams.set("zoid", lastSegmentWithHalte.halte.at(-1)!.id);
 
 	// Add date information from the booking
 	if (vbidRequest.data.hinfahrtDatum) {
